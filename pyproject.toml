@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-arbiter"
+version = "1.5.0"
+authors = [
+  { name="Fadel", email="dev@nexusarbiter.xyz" },
+]
+description = "Autonomous Escrow & Cryptographic Arbitration Protocol for AI Agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["ai-agents", "escrow", "blockchain", "arbitration", "ed25519", "web3"]
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "cryptography>=41.0.0",
+    "pynacl>=1.5.0",
+]
+
+[project.urls]
+"Homepage" = "https://nexusarbiter.xyz"
+"Documentation" = "https://nexusarbiter.xyz/docs"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nexus_arbiter*"]

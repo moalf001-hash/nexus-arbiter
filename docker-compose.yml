@@ -1,0 +1,22 @@
+services:
+  nexus-arbiter-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexus_arbiter_core
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - RPC_URL=https://sepolia.base.org
+      - ESCROW_CONTRACT_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+      - ARBITER_ADDRESS=0xFaDe100000000000000000000000000000000001
+    volumes:
+      # ربط قاعدة البيانات بالقرص المحلي لحفظ السجلات خارج الحاوية
+      - ./data:/app/data
+      - ./nexus_arbiter.db:/app/nexus_arbiter.db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

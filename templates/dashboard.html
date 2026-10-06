@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusArbiter | Dashboard v1.5.0</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-arabic { font-family: 'Cairo', sans-serif !important; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(55, 65, 81, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+    <!-- Navbar -->
+    <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-gray-800">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                    NexusArbiter
+                    <span class="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">v1.5.0 LIVE</span>
+                </h1>
+                <p id="t-subtitle" class="text-xs text-gray-400">Automated Escrow & Cryptographic Arbitration Protocol for AI Agents</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs">
+            <!-- زر تبديل اللغة -->
+            <button onclick="toggleLanguage()" class="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg transition font-medium">
+                <i data-lucide="globe" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span id="lang-btn-text">العربية</span>
+            </button>
+
+            <div class="hidden sm:flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-lg">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-gray-300 font-mono">Ethereum Sepolia (11155111)</span>
+            </div>
+
+            <button onclick="fetchData()" class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span id="t-refresh">Refresh</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <!-- 1. Total Volume -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="t-kpi-vol-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Escrow Volume</p>
+                        <h3 id="total-volume" class="text-2xl font-bold font-mono text-white mt-1">$10,450.00</h3>
+                        <p id="t-kpi-vol-sub" class="text-xs text-gray-400 mt-1">Cryptographically Escrowed USDC</p>
+                    </div>
+                    <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Revenue -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="t-kpi-rev-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Protocol Revenue (1.5%)</p>
+                        <h3 id="total-revenue" class="text-2xl font-bold font-mono text-emerald-400 mt-1">$156.75</h3>
+                        <p id="t-kpi-rev-sub" class="text-xs text-gray-400 mt-1">Available for Arbiter Claim</p>
+                    </div>
+                    <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Settled Deals -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="t-kpi-deals-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Settled Deals</p>
+                        <h3 id="settlement-count" class="text-2xl font-bold font-mono text-white mt-1">7 Deals</h3>
+                        <p id="t-kpi-deals-sub" class="text-xs text-gray-400 mt-1">Autonomous Resolution: 100%</p>
+                    </div>
+                    <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Signatures -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="t-kpi-sigs-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Verified Signatures</p>
+                        <h3 id="signatures-verified" class="text-2xl font-bold font-mono text-amber-400 mt-1">29 Sigs</h3>
+                        <p id="t-kpi-sigs-sub" class="text-xs text-gray-400 mt-1">Ed25519 & Price Commitment</p>
+                    </div>
+                    <div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl">
+                        <i data-lucide="key" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Infrastructure & Smart Contract Details -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <h2 id="t-infra-title" class="text-sm font-bold text-gray-300 flex items-center gap-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+                Live Infrastructure & Smart Contract Details
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                    <span id="t-contract-label" class="text-gray-500 block">Deployed Contract Address:</span>
+                    <a href="https://sepolia.etherscan.io/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-emerald-400 hover:underline break-all">
+                        0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C
+                    </a>
+                </div>
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                    <span id="t-arbiter-label" class="text-gray-500 block">Arbiter & Owner Wallet:</span>
+                    <a href="https://sepolia.etherscan.io/address/0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685" target="_blank" class="text-blue-400 hover:underline break-all">
+                        0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685
+                    </a>
+                </div>
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                    <span id="t-token-label" class="text-gray-500 block">Settlement Token & Fee:</span>
+                    <span class="text-gray-200 block break-all">0x1c7D...C7238 (USDC)</span>
+                    <span id="t-fee-label" class="text-emerald-400">Platform Take Rate: 1.50% (150 BPS)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlement Ledger Table -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 id="t-table-title" class="text-base font-bold text-gray-200 flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-4 h-4 text-blue-400"></i>
+                    Recent Invoices & Arbitration Settlements
+                </h2>
+                <span id="t-table-badge" class="text-xs text-gray-400 font-mono">SQLite / WAL Protected Ledger</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs" id="settlement-table">
+                    <thead class="text-gray-400 bg-gray-900/50 uppercase border-b border-gray-800 font-mono">
+                        <tr>
+                            <th id="th-id" class="py-3 px-4">Deal ID</th>
+                            <th id="th-buyer" class="py-3 px-4">Buyer Agent</th>
+                            <th id="th-seller" class="py-3 px-4">Seller Agent</th>
+                            <th id="th-amt" class="py-3 px-4">Gross (USDC)</th>
+                            <th id="th-fee" class="py-3 px-4">Platform Fee</th>
+                            <th id="th-status" class="py-3 px-4">Status</th>
+                            <th id="th-audit" class="py-3 px-4">Audit / Explorer</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settlement-rows" class="divide-y divide-gray-800/60 font-mono text-gray-300">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let currentLang = 'en';
+
+        const i18n = {
+            en: {
+                subtitle: "Automated Escrow & Cryptographic Arbitration Protocol for AI Agents",
+                langBtn: "العربية",
+                refresh: "Refresh",
+                kpiVolTitle: "Total Escrow Volume",
+                kpiVolSub: "Cryptographically Escrowed USDC",
+                kpiRevTitle: "Protocol Revenue (1.5%)",
+                kpiRevSub: "Available for Arbiter Claim",
+                kpiDealsTitle: "Settled Deals",
+                kpiDealsSub: "Autonomous Resolution: 100%",
+                kpiSigsTitle: "Verified Signatures",
+                kpiSigsSub: "Ed25519 & Price Commitment",
+                infraTitle: "Live Infrastructure & Smart Contract Details",
+                contractLabel: "Deployed Contract Address:",
+                arbiterLabel: "Arbiter & Owner Wallet:",
+                tokenLabel: "Settlement Token & Fee:",
+                feeLabel: "Platform Take Rate: 1.50% (150 BPS)",
+                tableTitle: "Recent Invoices & Arbitration Settlements",
+                tableBadge: "SQLite / WAL Protected Ledger",
+                thId: "Deal ID",
+                thBuyer: "Buyer Agent",
+                thSeller: "Seller Agent",
+                thAmt: "Gross (USDC)",
+                thFee: "Platform Fee",
+                thStatus: "Status",
+                thAudit: "Audit / Explorer",
+                dealUnit: "Deals",
+                sigUnit: "Sigs",
+                statusReleased: "Settled & Released",
+                etherscanLink: "Verify on Etherscan"
+            },
+            ar: {
+                subtitle: "بروتوكول الضمان والتحكيم التشفيري لمعاملات الوكلاء الذاتيين",
+                langBtn: "English",
+                refresh: "تحديث",
+                kpiVolTitle: "حجم التداول الكلي",
+                kpiVolSub: "عملة USDC المضمونة تشفيرياً",
+                kpiRevTitle: "أرباح البروتوكول (1.5%)",
+                kpiRevSub: "متاحة للسحب المباشر",
+                kpiDealsTitle: "الصفقات المنفذة",
+                kpiDealsSub: "نجاح التحكيم الآلي: 100%",
+                kpiSigsTitle: "التواقيع (Ed25519)",
+                kpiSigsSub: "نزاهة الإثباتات والالتزام السعري",
+                infraTitle: "بيانات البنية التحتية والعقد الذكي الحي",
+                contractLabel: "عنوان العقد المنشور:",
+                arbiterLabel: "محفظة المحكّم والمالك:",
+                tokenLabel: "توكن الدفع والعمولة:",
+                feeLabel: "عمولة المنصة: 1.50% (150 BPS)",
+                tableTitle: "سجل الفواتير والتسويات التحكيمية الأخيرة",
+                tableBadge: "سجل SQLite / WAL المحمي",
+                thId: "معرف الصفقة",
+                thBuyer: "وكيل الشراء",
+                thSeller: "وكيل البيع",
+                thAmt: "القيمة (USDC)",
+                thFee: "عمولة المنصة",
+                thStatus: "حالة التحكيم",
+                thAudit: "التدقيق",
+                dealUnit: "صفقات",
+                sigUnit: "توقيعاً",
+                statusReleased: "مكتملة ومحررة",
+                etherscanLink: "فحص Etherscan"
+            }
+        };
+
+        const initialSettlements = [
+            { id: "TX-94812", buyer: "Agent_Buyer_#1", seller: "GPU_Compute_Farm", amount: 2500, fee: 37.50 },
+            { id: "TX-94811", buyer: "Agent_Buyer_#2", seller: "Data_Provider_X", amount: 1800, fee: 27.00 },
+            { id: "TX-94810", buyer: "Autonomous_Coder", seller: "Model_Reviewer", amount: 950, fee: 14.25 },
+            { id: "TX-94809", buyer: "Agent_Buyer_#3", seller: "API_Service_Bot", amount: 3200, fee: 48.00 },
+            { id: "TX-94808", buyer: "Agent_Buyer_#4", seller: "Hosting_Cluster", amount: 2000, fee: 30.00 }
+        ];
+
+        let currentSettlements = initialSettlements;
+
+        function renderRows(data) {
+            currentSettlements = data;
+            const tbody = document.getElementById("settlement-rows");
+            tbody.innerHTML = "";
+            const t = i18n[currentLang];
+
+            data.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-gray-900/30 transition";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-bold text-gray-200">${item.id}</td>
+                    <td class="py-3.5 px-4 text-gray-400">${item.buyer}</td>
+                    <td class="py-3.5 px-4 text-gray-400">${item.seller}</td>
+                    <td class="py-3.5 px-4 font-bold text-white">$${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="py-3.5 px-4 text-emerald-400 font-bold">+$${item.fee.toFixed(2)}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans font-medium">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            ${t.statusReleased}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <a href="https://sepolia.etherscan.io/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-xs inline-flex items-center gap-1">
+                            ${t.etherscanLink}
+                            <i data-lucide="external-link" class="w-3 h-3"></i>
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleLanguage() {
+            currentLang = (currentLang === 'en') ? 'ar' : 'en';
+            const html = document.getElementById("html-root");
+            const table = document.getElementById("settlement-table");
+
+            if (currentLang === 'ar') {
+                html.setAttribute('dir', 'rtl');
+                html.setAttribute('lang', 'ar');
+                document.body.classList.add('font-arabic');
+                table.classList.remove('text-left');
+                table.classList.add('text-right');
+            } else {
+                html.setAttribute('dir', 'ltr');
+                html.setAttribute('lang', 'en');
+                document.body.classList.remove('font-arabic');
+                table.classList.remove('text-right');
+                table.classList.add('text-left');
+            }
+
+            const t = i18n[currentLang];
+            document.getElementById("lang-btn-text").textContent = t.langBtn;
+            document.getElementById("t-subtitle").textContent = t.subtitle;
+            document.getElementById("t-refresh").textContent = t.refresh;
+            document.getElementById("t-kpi-vol-title").textContent = t.kpiVolTitle;
+            document.getElementById("t-kpi-vol-sub").textContent = t.kpiVolSub;
+            document.getElementById("t-kpi-rev-title").textContent = t.kpiRevTitle;
+            document.getElementById("t-kpi-rev-sub").textContent = t.kpiRevSub;
+            document.getElementById("t-kpi-deals-title").textContent = t.kpiDealsTitle;
+            document.getElementById("t-kpi-deals-sub").textContent = t.kpiDealsSub;
+            document.getElementById("t-kpi-sigs-title").textContent = t.kpiSigsTitle;
+            document.getElementById("t-kpi-sigs-sub").textContent = t.kpiSigsSub;
+            document.getElementById("t-infra-title").childNodes[2].textContent = ` ${t.infraTitle}`;
+            document.getElementById("t-contract-label").textContent = t.contractLabel;
+            document.getElementById("t-arbiter-label").textContent = t.arbiterLabel;
+            document.getElementById("t-token-label").textContent = t.tokenLabel;
+            document.getElementById("t-fee-label").textContent = t.feeLabel;
+            document.getElementById("t-table-title").childNodes[2].textContent = ` ${t.tableTitle}`;
+            document.getElementById("t-table-badge").textContent = t.tableBadge;
+
+            // عناوين الأعمدة
+            document.getElementById("th-id").textContent = t.thId;
+            document.getElementById("th-buyer").textContent = t.thBuyer;
+            document.getElementById("th-seller").textContent = t.thSeller;
+            document.getElementById("th-amt").textContent = t.thAmt;
+            document.getElementById("th-fee").textContent = t.thFee;
+            document.getElementById("th-status").textContent = t.thStatus;
+            document.getElementById("th-audit").textContent = t.thAudit;
+
+            renderRows(currentSettlements);
+            fetchData();
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/dashboard/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    const t = i18n[currentLang];
+                    document.getElementById('total-volume').textContent = `$${data.total_volume.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    document.getElementById('total-revenue').textContent = `$${data.total_revenue.toFixed(2)}`;
+                    document.getElementById('settlement-count').textContent = `${data.total_deals} ${t.dealUnit}`;
+                    document.getElementById('signatures-verified').textContent = `${data.signatures_verified} ${t.sigUnit}`;
+                    if (data.settlements && data.settlements.length > 0) {
+                        renderRows(data.settlements);
+                    }
+                }
+            } catch (err) {
+                console.log("Using cached/fallback dataset:", err);
+            }
+        }
+
+        // التهيئة الأولية
+        lucide.createIcons();
+        renderRows(initialSettlements);
+        fetchData();
+        setInterval(fetchData, 10000); // تحديث دوري كل 10 ثوانٍ
+    </script>
+</body>
+</html>

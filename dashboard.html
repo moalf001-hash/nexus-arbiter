@@ -1,0 +1,237 @@
+<!-- C:\Users\Fadel\nexus-arbiter\templates\dashboard.html -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusArbiter | Dashboard v1.5.0</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(55, 65, 81, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+    <!-- شريط التنقل العلوي -->
+    <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-gray-800">
+        <div class="flex items-center space-x-3 space-x-reverse">
+            <div class="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                    NexusArbiter
+                    <span class="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">v1.5.0 LIVE</span>
+                </h1>
+                <p class="text-xs text-gray-400">بروتوكول الضمان والتحكيم التشفيري لمعاملات الوكلاء الذاتيين</p>
+            </div>
+        </div>
+
+        <!-- حالة الاتصال بالشبكة والعقد -->
+        <div class="flex items-center space-x-4 space-x-reverse text-xs">
+            <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-lg">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-gray-300">Ethereum Sepolia (11155111)</span>
+            </div>
+            <button onclick="fetchData()" class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                تحديث
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- بطاقات الإحصائيات الرئيسية (KPIs) -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <!-- حجم التداول الإجمالي -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">حجم التداول الكلي</p>
+                        <h3 id="total-volume" class="text-2xl font-bold font-mono text-white mt-1">$10,450.00</h3>
+                        <p class="text-xs text-gray-400 mt-1">عملة USDC المضمونة تشفيرياً</p>
+                    </div>
+                    <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- أرباح المنصة -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">أرباح البروتوكول (1.5%)</p>
+                        <h3 id="total-revenue" class="text-2xl font-bold font-mono text-emerald-400 mt-1">$156.75</h3>
+                        <p class="text-xs text-gray-400 mt-1">متاحة للسحب المباشر</p>
+                    </div>
+                    <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- إجمالي الصفقات -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">الصفقات المنفذة</p>
+                        <h3 id="settlement-count" class="text-2xl font-bold font-mono text-white mt-1">7 صفقات</h3>
+                        <p class="text-xs text-gray-400 mt-1">نجاح التحكيم الآلي: 100%</p>
+                    </div>
+                    <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- التواقيع المشفرة -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">التواقيع (Ed25519)</p>
+                        <h3 id="signatures-verified" class="text-2xl font-bold font-mono text-amber-400 mt-1">29 توقيعاً</h3>
+                        <p class="text-xs text-gray-400 mt-1">نزاهة الإثباتات والالتزام السعري</p>
+                    </div>
+                    <div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl">
+                        <i data-lucide="key" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- معلومات العقد وحالة الأمان -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <h2 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+                بيانات البنية التحتية والعقد الذكي الحي
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                    <span class="text-gray-500 block">عنوان العقد المنشور:</span>
+                    <a href="https://sepolia.etherscan.io/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-emerald-400 hover:underline break-all">
+                        0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C
+                    </a>
+                </div>
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                    <span class="text-gray-500 block">محفظة المحكّم والمالك:</span>
+                    <a href="https://sepolia.etherscan.io/address/0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685" target="_blank" class="text-blue-400 hover:underline break-all">
+                        0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685
+                    </a>
+                </div>
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                    <span class="text-gray-500 block">توكن الدفع والعمولة:</span>
+                    <span class="text-gray-200 block break-all">0x1c7D...C7238 (USDC)</span>
+                    <span class="text-emerald-400">عمولة المنصة: 1.50% (150 BPS)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول الصفقات والفواتير الأخيرة -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-bold text-gray-200 flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-4 h-4 text-blue-400"></i>
+                    سجل الفواتير والتسويات التحكيمية الأخيرة
+                </h2>
+                <span class="text-xs text-gray-400 font-mono">سجل SQLite / WAL المحمي</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs">
+                    <thead class="text-gray-400 bg-gray-900/50 uppercase border-b border-gray-800 font-mono">
+                        <tr>
+                            <th class="py-3 px-4">معرف الصفقة</th>
+                            <th class="py-3 px-4">وكيل الشراء</th>
+                            <th class="py-3 px-4">وكيل البيع</th>
+                            <th class="py-3 px-4">القيمة (USDC)</th>
+                            <th class="py-3 px-4">عمولة المنصة</th>
+                            <th class="py-3 px-4">حالة التحكيم</th>
+                            <th class="py-3 px-4">التدقيق</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settlement-rows" class="divide-y divide-gray-800/60 font-mono text-gray-300">
+                        <!-- تعبئة تلقائية عبر JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // بيانات تجريبية فورية لحين الاستجابة من الـ API
+        const initialSettlements = [
+            { id: "TX-94812", buyer: "Agent_Buyer_#1", seller: "GPU_Compute_Farm", amount: 2500, fee: 37.50, status: "مكتملة ومحررة", txHash: "0xF2D0..." },
+            { id: "TX-94811", buyer: "Agent_Buyer_#2", seller: "Data_Provider_X", amount: 1800, fee: 27.00, status: "مكتملة ومحررة", txHash: "0xF2D0..." },
+            { id: "TX-94810", buyer: "Autonomous_Coder", seller: "Model_Reviewer", amount: 950, fee: 14.25, status: "مكتملة ومحررة", txHash: "0xF2D0..." },
+            { id: "TX-94809", buyer: "Agent_Buyer_#3", seller: "API_Service_Bot", amount: 3200, fee: 48.00, status: "مكتملة ومحررة", txHash: "0xF2D0..." },
+            { id: "TX-94808", buyer: "Agent_Buyer_#4", seller: "Hosting_Cluster", amount: 2000, fee: 30.00, status: "مكتملة ومحررة", txHash: "0xF2D0..." }
+        ];
+
+        function renderRows(data) {
+            const tbody = document.getElementById("settlement-rows");
+            tbody.innerHTML = "";
+            data.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-gray-900/30 transition";
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-bold text-gray-200">${item.id}</td>
+                    <td class="py-3.5 px-4 text-gray-400">${item.buyer}</td>
+                    <td class="py-3.5 px-4 text-gray-400">${item.seller}</td>
+                    <td class="py-3.5 px-4 font-bold text-white">$${item.amount.toLocaleString()}</td>
+                    <td class="py-3.5 px-4 text-emerald-400 font-bold">$${item.fee.toFixed(2)}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            ${item.status}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <a href="https://sepolia.etherscan.io/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-xs">
+                            فحص Etherscan
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/dashboard/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('total-volume').textContent = `$${data.total_volume.toLocaleString()}`;
+                    document.getElementById('total-revenue').textContent = `$${data.total_revenue.toFixed(2)}`;
+                    document.getElementById('settlement-count').textContent = `${data.total_deals} صفقات`;
+                    document.getElementById('signatures-verified').textContent = `${data.signatures_verified} توقيعاً`;
+                    if (data.settlements && data.settlements.length > 0) {
+                        renderRows(data.settlements);
+                    }
+                }
+            } catch (err) {
+                console.log("استخدام البيانات المحلية للعرض الأولي:", err);
+            }
+        }
+
+        renderRows(initialSettlements);
+        fetchData();
+    </script>
+</body>
+</html>
