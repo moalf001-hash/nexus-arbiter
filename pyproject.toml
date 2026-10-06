@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-arbiter"
-version = "1.5.0"
+version = "1.5.1"
 authors = [
   { name="Fadel", email="dev@nexusarbiter.xyz" },
 ]
@@ -21,8 +21,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://nexusarbiter.xyz"
-"Documentation" = "https://nexusarbiter.xyz/docs"
+"Homepage" = "https://simple-filled-starts-faqs.trycloudflare.com/dashboard"
+"Documentation" = "https://simple-filled-starts-faqs.trycloudflare.com/docs"
+"Repository" = "https://github.com/moalf001-hash/nexus-arbiter"
 
 [tool.setuptools.packages.find]
 where = ["."]
