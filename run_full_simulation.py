@@ -3,7 +3,7 @@ import json
 from uuid import uuid4
 
 # 1. استيراد المكونات التي بنيناها
-from src.core.schemas import (
+from nexus_arbiter.schemas import (
     NegotiationPayload,
     SignedNegotiationMessage,
     ActionType,
@@ -11,7 +11,7 @@ from src.core.schemas import (
     CurrencyType
 )
 from src.core.fsm import NegotiationSession
-from src.crypto.signatures import generate_keypair, sign_bytes
+from nexus_arbiter.crypto.signatures import generate_keypair, sign_bytes
 from src.arbiter.verification import (
     ArbiterEngine,
     SecurityAuditDeliverable,

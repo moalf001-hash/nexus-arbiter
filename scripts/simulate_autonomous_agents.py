@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 
 from src.api.server import app
-from src.core.schemas import ItemType
+from nexus_arbiter.schemas import ItemType
 from src.sdk.agent_client import NexusAgentClient
 
 client = TestClient(app)

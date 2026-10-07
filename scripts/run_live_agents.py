@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from datetime import datetime, timezone, timedelta
-from src.core.schemas import ItemType
+from nexus_arbiter.schemas import ItemType
 from src.sdk.agent_client import NexusAgentClient
 
 def main():

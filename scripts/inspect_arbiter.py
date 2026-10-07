@@ -4,7 +4,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import json
 import sqlite3
-from src.crypto.signatures import verify_signature
+from nexus_arbiter.crypto.signatures import verify_signature
 
 def run_inspector():
     db_path = "nexus_arbiter.db"
