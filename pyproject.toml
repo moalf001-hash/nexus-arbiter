@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-arbiter"
-version = "1.5.1"
+version = "1.5.2"
 authors = [
   { name="Fadel", email="dev@nexusarbiter.xyz" },
 ]

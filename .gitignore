@@ -33,3 +33,8 @@ Thumbs.db
 # Encrypted Keystores and Secrets
 secrets/
 *.keystore.json
+
+# Web3 & Build artifacts
+artifacts/
+cache/
+node_modules/
