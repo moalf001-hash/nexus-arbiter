@@ -5,7 +5,7 @@ from typing import Any, Optional, Union
 from uuid import UUID, uuid4
 import httpx
 
-from src.core.schemas import (
+from nexus_arbiter.schemas import (
     ActionType,
     CurrencyType,
     ItemType,
@@ -14,8 +14,8 @@ from src.core.schemas import (
     PriceCommitment,
     SignedNegotiationMessage
 )
-from src.crypto.signatures import generate_keypair, sign_bytes
-from src.crypto.encryption import (
+from nexus_arbiter.crypto.signatures import generate_keypair, sign_bytes
+from nexus_arbiter.crypto.encryption import (
     generate_encryption_keypair,
     derive_shared_secret,
     encrypt_payload,

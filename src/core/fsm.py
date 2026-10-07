@@ -3,7 +3,8 @@ from typing import Optional, Union
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from src.core.schemas import (
+# 1. الاستيراد المباشر من الحزمة المعيارية الموحدة
+from nexus_arbiter.schemas import (
     ActionType,
     NegotiationPayload,
     EncryptedPayloadEnvelope,
@@ -16,7 +17,21 @@ class SessionStatus(str, Enum):
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
 
+# 2. استثناءات مفصلة تخدم طبقة الـ API
 class FSMException(Exception):
+    """الاستثناء الأساسي لآلة الحالة."""
+    pass
+
+class UnauthorizedParticipantError(FSMException):
+    """محاولة تدخل من طرف ثالث غير مصرح له."""
+    pass
+
+class KeyMismatchError(FSMException):
+    """محاولة تغيير المفتاح العام المسجل للوكيل."""
+    pass
+
+class TurnViolationError(FSMException):
+    """خرق لترتيب الأدوار بين الوكلاء."""
     pass
 
 class NegotiationSession(BaseModel):
@@ -44,8 +59,9 @@ class NegotiationSession(BaseModel):
             )
 
         if self.last_sender_id and message.sender_agent_id == self.last_sender_id:
-            raise FSMException(f"Role turn violation: agent {message.sender_agent_id} cannot submit consecutive steps")
+            raise TurnViolationError(f"Role turn violation: agent {message.sender_agent_id} cannot submit consecutive steps")
 
+        # المرحلة الأولى: بدء الجلسة
         if self.status == SessionStatus.INITIATED:
             if message.action != ActionType.PROPOSE:
                 raise FSMException("New session must be initialized with a PROPOSE action")
@@ -53,11 +69,27 @@ class NegotiationSession(BaseModel):
             self.buyer_id = message.sender_agent_id
             self.buyer_pubkey_hex = message.public_key_hex
 
+        # المرحلة الثانية: التفاوض القائم
         elif self.status == SessionStatus.NEGOTIATING:
-            if self.seller_id is None and message.sender_agent_id != self.buyer_id:
+            # تسجيل البائع في الخطوة الأولى التي يتفاعل فيها
+            if self.seller_id is None:
+                if message.sender_agent_id == self.buyer_id:
+                    raise TurnViolationError("Buyer cannot negotiate with themselves")
                 self.seller_id = message.sender_agent_id
                 self.seller_pubkey_hex = message.public_key_hex
+            else:
+                # [حماية أمنية 1]: منع الأطراف الخارجية بعد تسجيل المشتري والبائع
+                if message.sender_agent_id not in (self.buyer_id, self.seller_id):
+                    raise UnauthorizedParticipantError(
+                        f"Unauthorized agent {message.sender_agent_id}. Session is locked between {self.buyer_id} and {self.seller_id}."
+                    )
 
+            # [حماية أمنية 2]: التحقق من ثبات المفتاح العام وعدم انتحاله
+            expected_key = self.buyer_pubkey_hex if message.sender_agent_id == self.buyer_id else self.seller_pubkey_hex
+            if message.public_key_hex != expected_key:
+                raise KeyMismatchError(f"Public key mismatch for agent {message.sender_agent_id}")
+
+            # معالجة القرارات
             if message.action == ActionType.ACCEPT:
                 self.status = SessionStatus.ACCEPTED
                 self.agreed_payload = self.history[-1].payload

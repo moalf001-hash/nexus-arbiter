@@ -8,14 +8,23 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, FileResponse
 
-from src.core.schemas import (
+# 1. الاستيراد الموحد من الحزمة الأساسية مباشرة
+from nexus_arbiter.schemas import (
     SignedNegotiationMessage,
     NegotiationPayload,
     EncryptedPayloadEnvelope,
     PriceCommitment
 )
-from src.core.fsm import NegotiationSession, FSMException
-from src.crypto.signatures import verify_signature
+from nexus_arbiter.crypto.signatures import verify_signature
+
+# 2. استيراد آلة الحالة مع استثناءاتها الدقيقة
+from src.core.fsm import (
+    NegotiationSession,
+    FSMException,
+    TurnViolationError,
+    UnauthorizedParticipantError,
+    KeyMismatchError
+)
 from src.arbiter.verification import ArbiterEngine
 from src.invoicing.invoice_generator import InvoiceGenerator
 from src.blockchain.escrow_client import EscrowBlockchainClient
@@ -24,7 +33,7 @@ from src.storage.database import StorageManager
 app = FastAPI(
     title="NexusArbiter Gateway",
     description="Automated Escrow & Cryptographic Arbitration Protocol for Autonomous AI Agents",
-    version="1.5.0",
+    version="1.5.1",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -40,7 +49,7 @@ MAX_CONTENT_LENGTH = 128 * 1024  # 128 KB max payload size
 
 
 def get_db_path() -> Optional[str]:
-    """تحديد مسار ملف قاعدة بيانات SQLite المحلية"""
+    """تحديد مسار ملف قاعدة بيانات SQLite المحلية."""
     if hasattr(StorageManager, "DB_PATH"):
         return getattr(StorageManager, "DB_PATH")
     if hasattr(StorageManager, "db_path"):
@@ -61,7 +70,6 @@ def get_db_path() -> Optional[str]:
     return None
 
 
-# 1. نقطة نهاية تقديم لوحة التحكم
 @app.get("/dashboard", response_class=HTMLResponse)
 async def serve_dashboard():
     dashboard_path = os.path.join(os.getcwd(), "templates", "dashboard.html")
@@ -70,14 +78,13 @@ async def serve_dashboard():
     return HTMLResponse("<h1>ملف dashboard.html غير موجود في مجلد templates/</h1>", status_code=404)
 
 
-# 2. نقطة نهاية إحصائيات لوحة التحكم المتصلة بقاعدة البيانات حياً
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
     contract_addr = os.getenv("ESCROW_CONTRACT_ADDRESS", "0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C")
     arbiter_addr = os.getenv("ARBITER_WALLET_ADDRESS", "0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685")
 
     stats = {
-        "protocol": "NexusArbiter v1.5.0",
+        "protocol": "NexusArbiter v1.5.1",
         "network": "Ethereum Sepolia (11155111)",
         "contract_address": contract_addr,
         "arbiter_wallet": arbiter_addr,
@@ -107,7 +114,6 @@ async def get_dashboard_stats():
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = {row[0] for row in cursor.fetchall()}
 
-        # 1. قراءة الفواتير والتسويات المسجلة
         target_inv_table = None
         for candidate in ["invoices", "settlements", "deals"]:
             if candidate in tables:
@@ -117,8 +123,7 @@ async def get_dashboard_stats():
         if target_inv_table:
             cursor.execute(f"PRAGMA table_info({target_inv_table});")
             cols = {row[1] for row in cursor.fetchall()}
-            
-            # التحقق الدقيق من أسماء الأعمدة الفعلية
+
             amount_col = next((c for c in ["total_usdc", "total", "amount"] if c in cols), None)
             fee_col = next((c for c in ["platform_fee_usdc", "fee", "platform_fee"] if c in cols), None)
 
@@ -156,13 +161,12 @@ async def get_dashboard_stats():
                             "seller": str(seller),
                             "amount": amt,
                             "fee": fee,
-                            "status": "مكتملة ومحررة",
+                            "status": "Settled & Released",
                             "txHash": str(tx_hash)[:10] + "..." if len(str(tx_hash)) > 10 else str(tx_hash)
                         })
                     if live_settlements:
                         stats["settlements"] = live_settlements
 
-        # 2. قراءة عدد التواقيع المفحوصة من جدول الرسائل
         target_msg_table = None
         for candidate in ["messages", "negotiations", "signatures"]:
             if candidate in tables:
@@ -184,7 +188,6 @@ async def get_dashboard_stats():
 
 @app.middleware("http")
 async def security_guard_middleware(request: Request, call_next):
-    # 1. Payload size guard against memory exhaustion
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > MAX_CONTENT_LENGTH:
         return Response(
@@ -193,13 +196,17 @@ async def security_guard_middleware(request: Request, call_next):
             media_type="application/json"
         )
 
-    # 2. In-memory Rate Limiting per IP
     client_ip = request.client.host if request.client else "127.0.0.1"
     now = time.time()
-    
-    rate_limit_records[client_ip] = [t for t in rate_limit_records[client_ip] if now - t < WINDOW_SECONDS]
 
-    if len(rate_limit_records[client_ip]) >= MAX_REQUESTS_PER_WINDOW:
+    # تنظيف الطوابع الزمنية مع تفريغ الذاكرة للـ IPs المنتهية
+    valid_timestamps = [t for t in rate_limit_records[client_ip] if now - t < WINDOW_SECONDS]
+    if valid_timestamps:
+        rate_limit_records[client_ip] = valid_timestamps
+    elif client_ip in rate_limit_records:
+        del rate_limit_records[client_ip]
+
+    if len(rate_limit_records.get(client_ip, [])) >= MAX_REQUESTS_PER_WINDOW:
         return Response(
             content='{"detail": "Rate limit exceeded: too many requests"}',
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -236,7 +243,7 @@ def health_check():
     return {
         "status": "active",
         "protocol": "NexusArbiter",
-        "version": "1.5.0",
+        "version": "1.5.1",
         "hardened": True,
         "security": {
             "anti_spoofing": "ENFORCED",
@@ -264,8 +271,15 @@ def handle_negotiation_step(message: SignedNegotiationMessage):
         session = NegotiationSession(session_id=message.session_id)
         sessions_db[message.session_id] = session
 
+    # معالجة دقيقة للاستثناءات المنطقية برموز HTTP دقيقة
     try:
         session.apply_transition(message)
+    except TurnViolationError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except UnauthorizedParticipantError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except KeyMismatchError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except FSMException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -278,7 +292,7 @@ def handle_negotiation_step(message: SignedNegotiationMessage):
         pubkey_hex=message.public_key_hex,
         sig_hex=message.signature_hex
     )
-    
+
     agreed_payload_dict = session.agreed_payload.model_dump(mode="json") if session.agreed_payload else None
     StorageManager.save_session_state(
         session_id=str(session.session_id),
@@ -329,7 +343,7 @@ def verify_and_settle(req: SettleRequest):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Price commitment session ID mismatch")
         if pc.buyer_agent_id != session.buyer_id or pc.seller_agent_id != session.seller_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Price commitment party identities mismatch")
-        
+
         if abs(pc.agreed_amount_usdc - req.deal_amount_usdc) > 1e-6:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

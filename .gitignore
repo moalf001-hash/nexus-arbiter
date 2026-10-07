@@ -29,3 +29,7 @@ Thumbs.db
 
 # Executables
 *.exe
+
+# Encrypted Keystores and Secrets
+secrets/
+*.keystore.json

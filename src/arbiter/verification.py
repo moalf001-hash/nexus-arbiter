@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
 import hashlib
+import hmac
 import json
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
-from src.core.schemas import ItemType
-from src.crypto.signatures import verify_signature
+# استيراد النماذج والتشفير مباشرة من الحزمة الموحدة
+from nexus_arbiter.schemas import ItemType
+from nexus_arbiter.crypto.signatures import verify_signature
 
 class VulnerabilityFinding(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -24,7 +26,7 @@ class SecurityAuditDeliverable(BaseModel):
     completed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def canonical_hash(self) -> str:
-        """توليد بصمة SHA-256 للمخرجات لربطها بالمعاملة المالية والفاتورة."""
+        """توليد بصمة SHA-256 معيارية للمخرجات لربطها بالمعاملة المالية والعقد."""
         data = self.model_dump(mode="json")
         canonical_str = json.dumps(data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
@@ -47,12 +49,20 @@ class ArbiterEngine:
         """
         فحص حتمي وشامل لإثبات التسليم قبل إعطاء أمر فك حجز الأموال للعقد الذكي.
         """
-        # 1. فحص سلامة التوقيع الرقمي للبائع على مخرجات العمل
-        is_sig_valid = verify_signature(
-            public_key_hex=seller_pub_key_hex,
-            signature_hex=delivery_signature_hex,
-            data=raw_deliverable_json.encode("utf-8")
-        )
+        # 1. فحص سلامة التوقيع الرقمي للبائع على مخرجات العمل (Ed25519)
+        try:
+            is_sig_valid = verify_signature(
+                public_key_hex=seller_pub_key_hex,
+                signature_hex=delivery_signature_hex,
+                data=raw_deliverable_json.encode("utf-8")
+            )
+        except Exception as e:
+            return VerificationResult(
+                is_valid=False,
+                reason=f"فشل التحقق التشفيري: صيغة المفتاح أو التوقيع غير صالحة ({e})",
+                sla_passed=True
+            )
+
         if not is_sig_valid:
             return VerificationResult(
                 is_valid=False,
@@ -60,7 +70,7 @@ class ArbiterEngine:
                 sla_passed=True
             )
 
-        # 2. فحص مطابقة هيكلية التقرير للنموذج القياسي
+        # 2. فحص مطابقة هيكلية التقرير للنموذج القياسي (Schema Validation)
         try:
             deliverable_dict = json.loads(raw_deliverable_json)
             deliverable = SecurityAuditDeliverable(**deliverable_dict)
@@ -71,8 +81,8 @@ class ArbiterEngine:
                 sla_passed=True
             )
 
-        # 3. التأكد من تطابق معرف الجلسة
-        if deliverable.session_id != expected_session_id:
+        # 3. التأكد من تطابق معرف الجلسة بمقارنة آمنة ضد التوقيت
+        if not hmac.compare_digest(deliverable.session_id, expected_session_id):
             return VerificationResult(
                 is_valid=False,
                 reason=f"فشل التحقق: معرف الجلسة في التقرير غير مطابق ({deliverable.session_id})",
@@ -88,7 +98,7 @@ class ArbiterEngine:
                 sla_passed=False
             )
 
-        # في حال اجتياز جميع الفحوصات بنجاح
+        # 5. اجتياز الفحوصات وتوليد الهاش المعياري لفك الحجز
         return VerificationResult(
             is_valid=True,
             reason="نجح التسليم: المخرجات مطابقة 100% والتوقيع والمهلة الزمنية صحيحة",

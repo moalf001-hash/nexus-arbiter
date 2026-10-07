@@ -28,3 +28,7 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["nexus_arbiter*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

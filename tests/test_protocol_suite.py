@@ -4,9 +4,9 @@ import json
 from fastapi.testclient import TestClient
 
 from src.api.server import app
-from src.core.schemas import ItemType
+from nexus_arbiter.schemas import ItemType
 from src.sdk.agent_client import NexusAgentClient
-from src.crypto.signatures import generate_keypair, sign_bytes, verify_signature
+from nexus_arbiter.crypto.signatures import generate_keypair, sign_bytes, verify_signature
 
 client = TestClient(app)
 
