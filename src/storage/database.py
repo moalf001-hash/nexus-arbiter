@@ -1,7 +1,8 @@
 import sqlite3
 import json
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
+from src.auth.keys import hash_api_key
 
 DB_PATH = os.path.join("nexus_arbiter.db")
 
@@ -15,7 +16,7 @@ def get_connection():
     return conn
 
 def init_db():
-    """تهيئة الجداول المشفرة والمالية لقاعدة البيانات."""
+    """تهيئة الجداول المشفرة والمالية بالإضافة إلى جداول B2B SaaS."""
     with get_connection() as conn:
         cursor = conn.cursor()
         
@@ -66,6 +67,30 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # جدول الشركات والمشتركين (B2B Tenants)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tenants (
+                tenant_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                tier TEXT NOT NULL DEFAULT 'free',
+                monthly_limit INTEGER NOT NULL DEFAULT 100,
+                current_usage INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # جدول مفاتيح API المشفرة (Hashed API Keys)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                key_hash TEXT PRIMARY KEY,
+                prefix TEXT NOT NULL,
+                tenant_id TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tenant_id) REFERENCES tenants (tenant_id)
+            )
+        """)
         conn.commit()
 
 class StorageManager:
@@ -107,5 +132,68 @@ class StorageManager:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (invoice_id, session_id, buyer, seller, total, fee, net, deliv_hash, inv_hash, calldata))
             conn.commit()
+
+    # ==========================
+    # دوال B2B SaaS وإدارة المفاتيح
+    # ==========================
+
+    @staticmethod
+    def create_tenant(tenant_id: str, name: str, tier: str = "free", monthly_limit: int = 100):
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO tenants (tenant_id, name, tier, monthly_limit, current_usage)
+                VALUES (?, ?, ?, ?, 0)
+                ON CONFLICT(tenant_id) DO NOTHING
+            """, (tenant_id, name, tier, monthly_limit))
+            conn.commit()
+
+    @staticmethod
+    def save_api_key(key_hash: str, prefix: str, tenant_id: str):
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO api_keys (key_hash, prefix, tenant_id, is_active)
+                VALUES (?, ?, ?, 1)
+            """, (key_hash, prefix, tenant_id))
+            conn.commit()
+
+    @staticmethod
+    def authenticate_api_key(raw_key: str) -> Optional[Dict[str, Any]]:
+        """
+        التحقق من المفتاح وإرجاع تفاصيل المشترك إذا كان نشطاً ولم يتجاوز الحصة.
+        """
+        if not raw_key:
+            return None
+        khash = hash_api_key(raw_key)
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT t.tenant_id, t.name, t.tier, t.monthly_limit, t.current_usage, k.is_active
+                FROM api_keys k
+                JOIN tenants t ON k.tenant_id = t.tenant_id
+                WHERE k.key_hash = ?
+            """, (khash,))
+            row = cursor.fetchone()
+            if row and row["is_active"] == 1:
+                return dict(row)
+            return None
+
+    @staticmethod
+    def increment_and_check_quota(tenant_id: str) -> bool:
+        """
+        عملية ذرية (Atomic Transaction): تزيد العداد وتمنع التجاوز حتى مع هجمات التزامن (Race Conditions).
+        تعيد True إذا كان الطلب ضمن الحصة، و False إذا تجاوز الحصة.
+        """
+        with get_connection() as conn:
+            cursor = conn.cursor()
+        # فحص وزيادة ذرية
+            cursor.execute("""
+                UPDATE tenants
+                SET current_usage = current_usage + 1
+                WHERE tenant_id = ? AND current_usage < monthly_limit
+            """, (tenant_id,))
+            conn.commit()
+            return cursor.rowcount > 0
 
 init_db()

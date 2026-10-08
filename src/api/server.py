@@ -1,10 +1,11 @@
 import os
 import time
 import sqlite3
+import uuid
 from uuid import UUID
 from typing import Optional
 from collections import defaultdict
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
 from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, FileResponse
 
@@ -29,6 +30,10 @@ from src.arbiter.verification import ArbiterEngine
 from src.invoicing.invoice_generator import InvoiceGenerator
 from src.blockchain.escrow_client import EscrowBlockchainClient
 from src.storage.database import StorageManager
+
+# 3. استيراد طبقة حماية ومصادقة B2B SaaS
+from src.auth.middleware import verify_tenant_access
+from src.auth.keys import generate_api_key
 
 app = FastAPI(
     title="NexusArbiter Gateway",
@@ -183,6 +188,25 @@ async def get_dashboard_stats():
     except Exception as e:
         print(f"[NexusArbiter Dashboard] DB query notice: {e}")
 
+
+    # إضافة إحصائيات الـ SaaS والشركات
+    try:
+        if db_path and os.path.exists(db_path):
+            with sqlite3.connect(db_path) as s_conn:
+                s_conn.row_factory = sqlite3.Row
+                s_cur = s_conn.cursor()
+                s_cur.execute("SELECT COUNT(*), COALESCE(SUM(current_usage), 0) FROM tenants")
+                t_count, t_usage = s_cur.fetchone()
+                stats["saas_tenants_count"] = int(t_count)
+                stats["saas_total_usage"] = int(t_usage)
+                
+                s_cur.execute("SELECT t.name, t.tier, t.current_usage, t.monthly_limit, k.prefix, k.is_active FROM api_keys k JOIN tenants t ON k.tenant_id = t.tenant_id LIMIT 5")
+                stats["saas_keys"] = [dict(r) for r in s_cur.fetchall()]
+    except Exception as e:
+        stats["saas_tenants_count"] = 0
+        stats["saas_total_usage"] = 0
+        stats["saas_keys"] = []
+
     return stats
 
 
@@ -238,6 +262,12 @@ class SettleRequest(BaseModel):
     )
 
 
+class TenantCreateRequest(BaseModel):
+    name: str = Field(description="Tenant or Company name")
+    tier: str = Field(default="free", description="Subscription tier: free, pro, enterprise")
+    monthly_limit: int = Field(default=100, description="Monthly allowed negotiation operations")
+
+
 @app.get("/health", tags=["System"])
 def health_check():
     return {
@@ -248,13 +278,48 @@ def health_check():
         "security": {
             "anti_spoofing": "ENFORCED",
             "dos_protection": "ACTIVE",
-            "db_mode": "SQLite-WAL"
+            "db_mode": "SQLite-WAL",
+            "b2b_saas_auth": "ACTIVE"
         }
     }
 
 
+@app.post("/api/admin/tenants", status_code=status.HTTP_201_CREATED, tags=["B2B SaaS Admin"])
+def register_tenant(req: TenantCreateRequest):
+    """
+    تسجيل شركة جديدة وتوليد مفتاح API بصيغة مشفرة مع تحديد الحصة الشهرية.
+    """
+    tenant_id = f"tenant_{uuid.uuid4().hex[:8]}"
+    raw_key, key_hash, prefix = generate_api_key()
+
+    StorageManager.create_tenant(
+        tenant_id=tenant_id,
+        name=req.name,
+        tier=req.tier,
+        monthly_limit=req.monthly_limit
+    )
+    StorageManager.save_api_key(
+        key_hash=key_hash,
+        prefix=prefix,
+        tenant_id=tenant_id
+    )
+
+    return {
+        "tenant_id": tenant_id,
+        "name": req.name,
+        "tier": req.tier,
+        "monthly_limit": req.monthly_limit,
+        "api_key": raw_key,
+        "prefix": prefix,
+        "notice": "Store this API key securely. It will not be shown again."
+    }
+
+
 @app.post("/negotiate/step", status_code=status.HTTP_200_OK, tags=["Negotiation"])
-def handle_negotiation_step(message: SignedNegotiationMessage):
+def handle_negotiation_step(
+    message: SignedNegotiationMessage,
+    tenant: dict = Depends(verify_tenant_access)
+):
     is_valid_sig = verify_signature(
         public_key_hex=message.public_key_hex,
         signature_hex=message.signature_hex,
@@ -313,12 +378,16 @@ def handle_negotiation_step(message: SignedNegotiationMessage):
         "status": session.status.value,
         "sequence_id": session.expected_sequence_id - 1,
         "agreed_price": agreed_price,
-        "is_encrypted": isinstance(session.agreed_payload, EncryptedPayloadEnvelope)
+        "is_encrypted": isinstance(session.agreed_payload, EncryptedPayloadEnvelope),
+        "tenant_id": tenant["tenant_id"]
     }
 
 
 @app.post("/arbiter/settle", status_code=status.HTTP_200_OK, tags=["Arbitration"])
-def verify_and_settle(req: SettleRequest):
+def verify_and_settle(
+    req: SettleRequest,
+    tenant: dict = Depends(verify_tenant_access)
+):
     session = sessions_db.get(req.session_id)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
@@ -419,5 +488,6 @@ def verify_and_settle(req: SettleRequest):
             "calldata": settle_tx["data"],
             "gas_estimate": settle_tx["gas"],
             "ready_for_broadcast": True
-        }
+        },
+        "tenant_id": tenant["tenant_id"]
     }

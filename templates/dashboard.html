@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusArbiter | Dashboard v1.5.0</title>
+    <title>NexusArbiter | Dashboard v1.5.1</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -31,7 +31,7 @@
             <div>
                 <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
                     NexusArbiter
-                    <span class="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">v1.5.0 LIVE</span>
+                    <span class="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">v1.5.1 LIVE</span>
                 </h1>
                 <p id="t-subtitle" class="text-xs text-gray-400">Automated Escrow & Cryptographic Arbitration Protocol for AI Agents</p>
             </div>
@@ -59,7 +59,7 @@
     <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
         <!-- Metrics Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
             <!-- 1. Total Volume -->
             <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
                 <div class="flex justify-between items-start">
@@ -115,6 +115,20 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 5. B2B SaaS Tenants & Quotas (بطاقة الـ SaaS المضافة) -->
+            <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="t-kpi-saas-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">B2B SaaS Tenants</p>
+                        <h3 id="saas-tenants" class="text-2xl font-bold font-mono text-cyan-400 mt-1">0 Tenants</h3>
+                        <p id="saas-usage" class="text-xs text-gray-400 mt-1">Total Usage: 0 ops</p>
+                    </div>
+                    <div class="p-2.5 bg-cyan-500/10 text-cyan-400 rounded-xl">
+                        <i data-lucide="server" class="w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Infrastructure & Smart Contract Details -->
@@ -141,6 +155,36 @@
                     <span class="text-gray-200 block break-all">0x1c7D...C7238 (USDC)</span>
                     <span id="t-fee-label" class="text-emerald-400">Platform Take Rate: 1.50% (150 BPS)</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- B2B Enterprise Tenants & API Access Keys Table (جدول المفاتيح المضاف) -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 id="t-saas-table-title" class="text-base font-bold text-gray-200 flex items-center gap-2">
+                    <i data-lucide="key-round" class="w-4 h-4 text-cyan-400"></i>
+                    B2B Enterprise Tenants & API Access Keys
+                </h2>
+                <span id="t-saas-badge" class="text-xs text-gray-400 font-mono">HMAC SHA-256 Hashed Protection</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs" id="saas-table">
+                    <thead class="text-gray-400 bg-gray-900/50 uppercase border-b border-gray-800 font-mono">
+                        <tr>
+                            <th id="th-saas-name" class="py-3 px-4">Organization Name</th>
+                            <th id="th-saas-tier" class="py-3 px-4">Subscription Tier</th>
+                            <th id="th-saas-key" class="py-3 px-4">Key Identifier</th>
+                            <th id="th-saas-quota" class="py-3 px-4">Monthly Quota Consumption</th>
+                            <th id="th-saas-status" class="py-3 px-4">Key Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="saas-rows" class="divide-y divide-gray-800/60 font-mono text-gray-300">
+                        <tr>
+                            <td colspan="5" class="py-4 px-4 text-center text-gray-500">No active B2B enterprise tenants found.</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -191,11 +235,23 @@
                 kpiDealsSub: "Autonomous Resolution: 100%",
                 kpiSigsTitle: "Verified Signatures",
                 kpiSigsSub: "Ed25519 & Price Commitment",
+                kpiSaasTitle: "B2B SaaS Tenants",
+                saasUsagePrefix: "Total Usage:",
                 infraTitle: "Live Infrastructure & Smart Contract Details",
                 contractLabel: "Deployed Contract Address:",
                 arbiterLabel: "Arbiter & Owner Wallet:",
                 tokenLabel: "Settlement Token & Fee:",
                 feeLabel: "Platform Take Rate: 1.50% (150 BPS)",
+                saasTableTitle: "B2B Enterprise Tenants & API Access Keys",
+                saasBadge: "HMAC SHA-256 Hashed Protection",
+                thSaasName: "Organization Name",
+                thSaasTier: "Subscription Tier",
+                thSaasKey: "Key Identifier",
+                thSaasQuota: "Monthly Quota Consumption",
+                thSaasStatus: "Key Status",
+                saasEmpty: "No active B2B enterprise tenants found.",
+                saasActive: "Active & Verified",
+                saasInactive: "Revoked",
                 tableTitle: "Recent Invoices & Arbitration Settlements",
                 tableBadge: "SQLite / WAL Protected Ledger",
                 thId: "Deal ID",
@@ -207,6 +263,7 @@
                 thAudit: "Audit / Explorer",
                 dealUnit: "Deals",
                 sigUnit: "Sigs",
+                tenantUnit: "Tenants",
                 statusReleased: "Settled & Released",
                 etherscanLink: "Verify on Etherscan"
             },
@@ -222,11 +279,23 @@
                 kpiDealsSub: "نجاح التحكيم الآلي: 100%",
                 kpiSigsTitle: "التواقيع (Ed25519)",
                 kpiSigsSub: "نزاهة الإثباتات والالتزام السعري",
+                kpiSaasTitle: "مشتركو B2B SaaS",
+                saasUsagePrefix: "إجمالي الاستهلاك:",
                 infraTitle: "بيانات البنية التحتية والعقد الذكي الحي",
                 contractLabel: "عنوان العقد المنشور:",
                 arbiterLabel: "محفظة المحكّم والمالك:",
                 tokenLabel: "توكن الدفع والعمولة:",
                 feeLabel: "عمولة المنصة: 1.50% (150 BPS)",
+                saasTableTitle: "شركات B2B ومفاتيح الربط البرمجي (API)",
+                saasBadge: "حماية مشفرة بهاش HMAC SHA-256",
+                thSaasName: "اسم الشركة",
+                thSaasTier: "خطة الاشتراك",
+                thSaasKey: "بادئة المفتاح",
+                thSaasQuota: "استهلاك الحصة الشهرية",
+                thSaasStatus: "حالة المفتاح",
+                saasEmpty: "لا توجد شركات مسجلة حالياً.",
+                saasActive: "نشط وموثق",
+                saasInactive: "معطل",
                 tableTitle: "سجل الفواتير والتسويات التحكيمية الأخيرة",
                 tableBadge: "سجل SQLite / WAL المحمي",
                 thId: "معرف الصفقة",
@@ -238,6 +307,7 @@
                 thAudit: "التدقيق",
                 dealUnit: "صفقات",
                 sigUnit: "توقيعاً",
+                tenantUnit: "شركات",
                 statusReleased: "مكتملة ومحررة",
                 etherscanLink: "فحص Etherscan"
             }
@@ -252,6 +322,7 @@
         ];
 
         let currentSettlements = initialSettlements;
+        let currentSaasKeys = [];
 
         function renderRows(data) {
             currentSettlements = data;
@@ -286,10 +357,59 @@
             lucide.createIcons();
         }
 
+        function renderSaasRows(keys) {
+            currentSaasKeys = keys || [];
+            const tbody = document.getElementById("saas-rows");
+            tbody.innerHTML = "";
+            const t = i18n[currentLang];
+
+            if (!currentSaasKeys || currentSaasKeys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-4 px-4 text-center text-gray-500">${t.saasEmpty}</td></tr>`;
+                return;
+            }
+
+            currentSaasKeys.forEach(k => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-gray-900/30 transition";
+                const usagePercent = Math.min(100, Math.round(((k.current_usage || 0) / (k.monthly_limit || 1)) * 100));
+                const isActive = (k.is_active === 1 || k.is_active === true);
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 font-bold text-gray-200 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        ${k.name}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="uppercase font-mono text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded">
+                            ${k.tier}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-cyan-300 font-mono">${k.prefix}...</td>
+                    <td class="py-3.5 px-4">
+                        <div class="flex items-center gap-2">
+                            <span>${k.current_usage || 0} / ${k.monthly_limit} ops</span>
+                            <div class="w-16 bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-cyan-400 h-full" style="width: ${usagePercent}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] ${isActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'} font-sans font-medium">
+                            <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-red-400'}"></span>
+                            ${isActive ? t.saasActive : t.saasInactive}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
         function toggleLanguage() {
             currentLang = (currentLang === 'en') ? 'ar' : 'en';
             const html = document.getElementById("html-root");
             const table = document.getElementById("settlement-table");
+            const saasTable = document.getElementById("saas-table");
 
             if (currentLang === 'ar') {
                 html.setAttribute('dir', 'rtl');
@@ -297,12 +417,16 @@
                 document.body.classList.add('font-arabic');
                 table.classList.remove('text-left');
                 table.classList.add('text-right');
+                saasTable.classList.remove('text-left');
+                saasTable.classList.add('text-right');
             } else {
                 html.setAttribute('dir', 'ltr');
                 html.setAttribute('lang', 'en');
                 document.body.classList.remove('font-arabic');
                 table.classList.remove('text-right');
                 table.classList.add('text-left');
+                saasTable.classList.remove('text-right');
+                saasTable.classList.add('text-left');
             }
 
             const t = i18n[currentLang];
@@ -317,11 +441,19 @@
             document.getElementById("t-kpi-deals-sub").textContent = t.kpiDealsSub;
             document.getElementById("t-kpi-sigs-title").textContent = t.kpiSigsTitle;
             document.getElementById("t-kpi-sigs-sub").textContent = t.kpiSigsSub;
+            document.getElementById("t-kpi-saas-title").textContent = t.kpiSaasTitle;
             document.getElementById("t-infra-title").childNodes[2].textContent = ` ${t.infraTitle}`;
             document.getElementById("t-contract-label").textContent = t.contractLabel;
             document.getElementById("t-arbiter-label").textContent = t.arbiterLabel;
             document.getElementById("t-token-label").textContent = t.tokenLabel;
             document.getElementById("t-fee-label").textContent = t.feeLabel;
+            document.getElementById("t-saas-table-title").childNodes[2].textContent = ` ${t.saasTableTitle}`;
+            document.getElementById("t-saas-badge").textContent = t.saasBadge;
+            document.getElementById("th-saas-name").textContent = t.thSaasName;
+            document.getElementById("th-saas-tier").textContent = t.thSaasTier;
+            document.getElementById("th-saas-key").textContent = t.thSaasKey;
+            document.getElementById("th-saas-quota").textContent = t.thSaasQuota;
+            document.getElementById("th-saas-status").textContent = t.thSaasStatus;
             document.getElementById("t-table-title").childNodes[2].textContent = ` ${t.tableTitle}`;
             document.getElementById("t-table-badge").textContent = t.tableBadge;
 
@@ -335,6 +467,7 @@
             document.getElementById("th-audit").textContent = t.thAudit;
 
             renderRows(currentSettlements);
+            renderSaasRows(currentSaasKeys);
             fetchData();
         }
 
@@ -348,8 +481,16 @@
                     document.getElementById('total-revenue').textContent = `$${data.total_revenue.toFixed(2)}`;
                     document.getElementById('settlement-count').textContent = `${data.total_deals} ${t.dealUnit}`;
                     document.getElementById('signatures-verified').textContent = `${data.signatures_verified} ${t.sigUnit}`;
+
+                    // تحديث بيانات الـ SaaS
+                    document.getElementById('saas-tenants').textContent = `${data.saas_tenants_count || 0} ${t.tenantUnit}`;
+                    document.getElementById('saas-usage').textContent = `${t.saasUsagePrefix} ${data.saas_total_usage || 0} ops`;
+
                     if (data.settlements && data.settlements.length > 0) {
                         renderRows(data.settlements);
+                    }
+                    if (data.saas_keys) {
+                        renderSaasRows(data.saas_keys);
                     }
                 }
             } catch (err) {
