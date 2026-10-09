@@ -18,7 +18,7 @@ async def verify_tenant_access(api_key: str = Security(API_KEY_HEADER)):
             detail="Authentication failed: Invalid or inactive API key."
         )
 
-    # استهلاك ذري يمنع هجمات التزامن
+    # Atomic consumption guard preventing race conditions and quota bypass
     is_allowed = StorageManager.increment_and_check_quota(tenant["tenant_id"])
     if not is_allowed:
         raise HTTPException(

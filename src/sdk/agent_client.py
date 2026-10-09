@@ -72,7 +72,7 @@ class NexusAgentClient:
         self.session_sequences[session_id] = current_seq + 1
         return resp.json()
 
-    # --- التشفير التام (E2EE) ---
+    # --- End-to-End Encryption (E2EE) Protocols ---
 
     def create_encrypted_payload(
         self,
@@ -159,7 +159,7 @@ class NexusAgentClient:
         )
         return enc_envelope, res
 
-    # --- حماية الالتزام التشفيري للسعر (Price Commitment) ---
+    # --- Cryptographic Price Commitment Protection ---
 
     def create_price_commitment(
         self,
@@ -167,7 +167,7 @@ class NexusAgentClient:
         agreed_amount_usdc: float,
         seller_agent_id: str
     ) -> PriceCommitment:
-        """يوقّع المشتري رياضياً على السعر النهائي لمنع تلاعب البائع به أثناء التسوية."""
+        """Buyer mathematically signs final agreed price to prevent seller price-spoofing during settlement."""
         commitment = PriceCommitment(
             session_id=session_id,
             agreed_amount_usdc=agreed_amount_usdc,
@@ -179,7 +179,7 @@ class NexusAgentClient:
         sig = sign_bytes(self.private_key, commitment.digest_bytes())
         return commitment.model_copy(update={"buyer_signature_hex": sig})
 
-    # --- القبول والتحكيم والتسوية ---
+    # --- Acceptance, Arbitration & Escrow Settlement ---
 
     def accept(
         self,

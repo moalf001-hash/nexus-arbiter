@@ -5,7 +5,7 @@ import json
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
-# استيراد النماذج والتشفير مباشرة من الحزمة الموحدة
+# Import schemas and cryptographic utilities directly from the unified package
 from nexus_arbiter.schemas import ItemType
 from nexus_arbiter.crypto.signatures import verify_signature
 
@@ -26,7 +26,7 @@ class SecurityAuditDeliverable(BaseModel):
     completed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def canonical_hash(self) -> str:
-        """توليد بصمة SHA-256 معيارية للمخرجات لربطها بالمعاملة المالية والعقد."""
+        """Generate canonical SHA-256 digest of the deliverable to bind it to the ledger and on-chain contract."""
         data = self.model_dump(mode="json")
         canonical_str = json.dumps(data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
@@ -47,9 +47,9 @@ class ArbiterEngine:
         deadline_timestamp: float
     ) -> VerificationResult:
         """
-        فحص حتمي وشامل لإثبات التسليم قبل إعطاء أمر فك حجز الأموال للعقد الذكي.
+        Deterministic arbitration check for Proof of Delivery (PoD) prior to releasing escrowed funds on-chain.
         """
-        # 1. فحص سلامة التوقيع الرقمي للبائع على مخرجات العمل (Ed25519)
+        # 1. Verify seller's Ed25519 cryptographic signature over raw deliverable payload
         try:
             is_sig_valid = verify_signature(
                 public_key_hex=seller_pub_key_hex,
@@ -59,49 +59,49 @@ class ArbiterEngine:
         except Exception as e:
             return VerificationResult(
                 is_valid=False,
-                reason=f"فشل التحقق التشفيري: صيغة المفتاح أو التوقيع غير صالحة ({e})",
+                reason=f"Cryptographic verification error: Invalid key or signature encoding ({e})",
                 sla_passed=True
             )
 
         if not is_sig_valid:
             return VerificationResult(
                 is_valid=False,
-                reason="فشل التحقق: توقيع البائع على مخرجات التسليم غير صالح أو تم التلاعب به",
+                reason="Verification failed: Seller delivery signature is invalid or has been tampered with",
                 sla_passed=True
             )
 
-        # 2. فحص مطابقة هيكلية التقرير للنموذج القياسي (Schema Validation)
+        # 2. Validate deliverable structure against schema specification
         try:
             deliverable_dict = json.loads(raw_deliverable_json)
             deliverable = SecurityAuditDeliverable(**deliverable_dict)
         except Exception as e:
             return VerificationResult(
                 is_valid=False,
-                reason=f"فشل التحقق: مخرجات التسليم لا تطابق معايير الـ Schema المطلوبة ({e})",
+                reason=f"Verification failed: Deliverable payload does not match required schema ({e})",
                 sla_passed=True
             )
 
-        # 3. التأكد من تطابق معرف الجلسة بمقارنة آمنة ضد التوقيت
+        # 3. Ensure session ID matches using constant-time comparison against timing attacks
         if not hmac.compare_digest(deliverable.session_id, expected_session_id):
             return VerificationResult(
                 is_valid=False,
-                reason=f"فشل التحقق: معرف الجلسة في التقرير غير مطابق ({deliverable.session_id})",
+                reason=f"Verification failed: Deliverable session ID mismatch ({deliverable.session_id})",
                 sla_passed=True
             )
 
-        # 4. فحص الالتزام بمهلة الـ SLA
+        # 4. Enforce SLA deadline compliance
         now_ts = datetime.now(timezone.utc).timestamp()
         if now_ts > deadline_timestamp:
             return VerificationResult(
                 is_valid=False,
-                reason="فشل التسليم: تم تجاوز مهلة الـ SLA المتفق عليها في العقد",
+                reason="Delivery failed: Service Level Agreement (SLA) deadline exceeded",
                 sla_passed=False
             )
 
-        # 5. اجتياز الفحوصات وتوليد الهاش المعياري لفك الحجز
+        # 5. All assertions passed; compute canonical hash for on-chain settlement release
         return VerificationResult(
             is_valid=True,
-            reason="نجح التسليم: المخرجات مطابقة 100% والتوقيع والمهلة الزمنية صحيحة",
+            reason="Delivery verified: Payload schema, cryptographic signature, and SLA deadline validated successfully",
             deliverable_hash=deliverable.canonical_hash(),
             sla_passed=True
         )

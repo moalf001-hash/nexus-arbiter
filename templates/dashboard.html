@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusArbiter | Dashboard v1.5.1</title>
+    <title>NexusArbiter | Live Gateway Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -30,14 +30,20 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
-                    NexusArbiter
-                    <span class="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">v1.5.1 LIVE</span>
+                    <span>NexusArbiter</span>
+                    <span id="protocol-version" class="text-xs font-mono font-normal bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">v1.5.2 LIVE</span>
                 </h1>
                 <p id="t-subtitle" class="text-xs text-gray-400">Automated Escrow & Cryptographic Arbitration Protocol for AI Agents</p>
             </div>
         </div>
 
         <div class="flex items-center gap-3 text-xs">
+            <!-- زر إنشاء مفتاح جديد -->
+            <button onclick="openKeyModal()" class="flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-3 py-1.5 rounded-lg shadow-lg shadow-cyan-600/20 transition">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                <span id="t-btn-newkey">Create API Key</span>
+            </button>
+
             <!-- زر تبديل اللغة -->
             <button onclick="toggleLanguage()" class="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg transition font-medium">
                 <i data-lucide="globe" class="w-3.5 h-3.5 text-indigo-400"></i>
@@ -46,7 +52,7 @@
 
             <div class="hidden sm:flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span class="text-gray-300 font-mono">Ethereum Sepolia (11155111)</span>
+                <span id="network-name" class="text-gray-300 font-mono">Base Sepolia (84532)</span>
             </div>
 
             <button onclick="fetchData()" class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition">
@@ -65,7 +71,7 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p id="t-kpi-vol-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Escrow Volume</p>
-                        <h3 id="total-volume" class="text-2xl font-bold font-mono text-white mt-1">$10,450.00</h3>
+                        <h3 id="total-volume" class="text-2xl font-bold font-mono text-white mt-1">---</h3>
                         <p id="t-kpi-vol-sub" class="text-xs text-gray-400 mt-1">Cryptographically Escrowed USDC</p>
                     </div>
                     <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl">
@@ -79,7 +85,7 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p id="t-kpi-rev-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Protocol Revenue (1.5%)</p>
-                        <h3 id="total-revenue" class="text-2xl font-bold font-mono text-emerald-400 mt-1">$156.75</h3>
+                        <h3 id="total-revenue" class="text-2xl font-bold font-mono text-emerald-400 mt-1">---</h3>
                         <p id="t-kpi-rev-sub" class="text-xs text-gray-400 mt-1">Available for Arbiter Claim</p>
                     </div>
                     <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
@@ -93,7 +99,7 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p id="t-kpi-deals-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Settled Deals</p>
-                        <h3 id="settlement-count" class="text-2xl font-bold font-mono text-white mt-1">7 Deals</h3>
+                        <h3 id="settlement-count" class="text-2xl font-bold font-mono text-white mt-1">---</h3>
                         <p id="t-kpi-deals-sub" class="text-xs text-gray-400 mt-1">Autonomous Resolution: 100%</p>
                     </div>
                     <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl">
@@ -107,7 +113,7 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p id="t-kpi-sigs-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Verified Signatures</p>
-                        <h3 id="signatures-verified" class="text-2xl font-bold font-mono text-amber-400 mt-1">29 Sigs</h3>
+                        <h3 id="signatures-verified" class="text-2xl font-bold font-mono text-amber-400 mt-1">---</h3>
                         <p id="t-kpi-sigs-sub" class="text-xs text-gray-400 mt-1">Ed25519 & Price Commitment</p>
                     </div>
                     <div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl">
@@ -116,13 +122,13 @@
                 </div>
             </div>
 
-            <!-- 5. B2B SaaS Tenants & Quotas (بطاقة الـ SaaS المضافة) -->
+            <!-- 5. B2B SaaS Tenants -->
             <div class="glass-panel p-5 rounded-2xl relative overflow-hidden">
                 <div class="flex justify-between items-start">
                     <div>
                         <p id="t-kpi-saas-title" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">B2B SaaS Tenants</p>
-                        <h3 id="saas-tenants" class="text-2xl font-bold font-mono text-cyan-400 mt-1">0 Tenants</h3>
-                        <p id="saas-usage" class="text-xs text-gray-400 mt-1">Total Usage: 0 ops</p>
+                        <h3 id="saas-tenants" class="text-2xl font-bold font-mono text-cyan-400 mt-1">---</h3>
+                        <p id="saas-usage" class="text-xs text-gray-400 mt-1">Total Usage: ---</p>
                     </div>
                     <div class="p-2.5 bg-cyan-500/10 text-cyan-400 rounded-xl">
                         <i data-lucide="server" class="w-5 h-5"></i>
@@ -139,33 +145,41 @@
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
                 <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
-                    <span id="t-contract-label" class="text-gray-500 block">Deployed Contract Address:</span>
-                    <a href="https://sepolia.etherscan.io/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-emerald-400 hover:underline break-all">
+                    <span id="t-contract-label" class="text-gray-500 block">Deployed Escrow Contract:</span>
+                    <a id="contract-link" href="https://sepolia.basescan.org/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-emerald-400 hover:underline break-all">
                         0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C
                     </a>
                 </div>
                 <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
                     <span id="t-arbiter-label" class="text-gray-500 block">Arbiter & Owner Wallet:</span>
-                    <a href="https://sepolia.etherscan.io/address/0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685" target="_blank" class="text-blue-400 hover:underline break-all">
+                    <a id="arbiter-link" href="https://sepolia.basescan.org/address/0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685" target="_blank" class="text-blue-400 hover:underline break-all">
                         0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685
                     </a>
                 </div>
                 <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800">
                     <span id="t-token-label" class="text-gray-500 block">Settlement Token & Fee:</span>
-                    <span class="text-gray-200 block break-all">0x1c7D...C7238 (USDC)</span>
-                    <span id="t-fee-label" class="text-emerald-400">Platform Take Rate: 1.50% (150 BPS)</span>
+                    <a id="usdc-link" href="https://sepolia.basescan.org/token/0x036CbD53842c5426634e7929541eC2318f3dCF7e" target="_blank" class="text-emerald-400 hover:underline block break-all">
+                        0x036CbD53842c5426634e7929541eC2318f3dCF7e (USDC)
+                    </a>
+                    <span id="t-fee-label" class="text-cyan-400 block mt-1">Platform Take Rate: 1.50% (150 BPS)</span>
                 </div>
             </div>
         </div>
 
-        <!-- B2B Enterprise Tenants & API Access Keys Table (جدول المفاتيح المضاف) -->
+        <!-- B2B Enterprise Tenants & API Access Keys Table -->
         <div class="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
             <div class="flex justify-between items-center">
                 <h2 id="t-saas-table-title" class="text-base font-bold text-gray-200 flex items-center gap-2">
                     <i data-lucide="key-round" class="w-4 h-4 text-cyan-400"></i>
                     B2B Enterprise Tenants & API Access Keys
                 </h2>
-                <span id="t-saas-badge" class="text-xs text-gray-400 font-mono">HMAC SHA-256 Hashed Protection</span>
+                <div class="flex items-center gap-3">
+                    <button onclick="openKeyModal()" class="text-xs bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span id="t-btn-newkey-sub">New Key</span>
+                    </button>
+                    <span id="t-saas-badge" class="text-xs text-gray-400 font-mono">HMAC SHA-256 Hashed Protection</span>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -181,7 +195,7 @@
                     </thead>
                     <tbody id="saas-rows" class="divide-y divide-gray-800/60 font-mono text-gray-300">
                         <tr>
-                            <td colspan="5" class="py-4 px-4 text-center text-gray-500">No active B2B enterprise tenants found.</td>
+                            <td colspan="5" class="py-4 px-4 text-center text-gray-500">Loading tenants...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -212,12 +226,69 @@
                         </tr>
                     </thead>
                     <tbody id="settlement-rows" class="divide-y divide-gray-800/60 font-mono text-gray-300">
+                        <tr>
+                            <td colspan="7" class="py-4 px-4 text-center text-gray-500">Loading settlements...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
     </main>
+
+    <!-- Modal: توليد مفتاح API جديد للمؤسسات -->
+    <div id="key-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 id="m-key-title" class="text-base font-bold text-white flex items-center gap-2">
+                    <i data-lucide="key" class="w-5 h-5 text-cyan-400"></i>
+                    Create New Organization API Key
+                </h3>
+                <button onclick="closeKeyModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs" id="key-form-area">
+                <div>
+                    <label id="lbl-m-org" class="block text-gray-400 mb-1">Company / Organization Name</label>
+                    <input type="text" id="m-org-name" placeholder="e.g. Acme AI Technologies" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans">
+                </div>
+
+                <div>
+                    <label id="lbl-m-tier" class="block text-gray-400 mb-1">Subscription Tier & Quota</label>
+                    <select id="m-tier-select" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+                        <option value="free">Free Tier (100 ops / month)</option>
+                        <option value="pro" selected>Pro Tier (1,000 ops / month)</option>
+                        <option value="enterprise">Enterprise Tier (10,000 ops / month)</option>
+                    </select>
+                </div>
+
+                <button onclick="submitGenerateKey()" id="btn-submit-key" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2.5 rounded-lg transition mt-2">
+                    Generate API Key
+                </button>
+            </div>
+
+            <!-- النتيجة بعد التوليد -->
+            <div id="key-result-area" class="space-y-3 text-xs hidden">
+                <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300">
+                    <p id="msg-key-created" class="font-bold">API Key Generated Successfully!</p>
+                    <p class="text-[11px] text-gray-400 mt-1">Make sure to copy your key now. It won't be shown again.</p>
+                </div>
+
+                <div class="bg-gray-950 p-3 rounded-lg border border-gray-800 flex justify-between items-center">
+                    <span id="generated-key-val" class="font-mono text-cyan-300 break-all text-[11px] select-all">nx_live_...</span>
+                    <button onclick="copyGeneratedKey()" class="ml-2 p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <button onclick="closeKeyModal()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-200 py-2 rounded-lg transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let currentLang = 'en';
@@ -238,7 +309,7 @@
                 kpiSaasTitle: "B2B SaaS Tenants",
                 saasUsagePrefix: "Total Usage:",
                 infraTitle: "Live Infrastructure & Smart Contract Details",
-                contractLabel: "Deployed Contract Address:",
+                contractLabel: "Deployed Escrow Contract:",
                 arbiterLabel: "Arbiter & Owner Wallet:",
                 tokenLabel: "Settlement Token & Fee:",
                 feeLabel: "Platform Take Rate: 1.50% (150 BPS)",
@@ -254,6 +325,8 @@
                 saasInactive: "Revoked",
                 tableTitle: "Recent Invoices & Arbitration Settlements",
                 tableBadge: "SQLite / WAL Protected Ledger",
+                btnNewKey: "Create API Key",
+                btnNewKeySub: "New Key",
                 thId: "Deal ID",
                 thBuyer: "Buyer Agent",
                 thSeller: "Seller Agent",
@@ -265,7 +338,7 @@
                 sigUnit: "Sigs",
                 tenantUnit: "Tenants",
                 statusReleased: "Settled & Released",
-                etherscanLink: "Verify on Etherscan"
+                explorerLink: "Verify on BaseScan"
             },
             ar: {
                 subtitle: "بروتوكول الضمان والتحكيم التشفيري لمعاملات الوكلاء الذاتيين",
@@ -282,7 +355,7 @@
                 kpiSaasTitle: "مشتركو B2B SaaS",
                 saasUsagePrefix: "إجمالي الاستهلاك:",
                 infraTitle: "بيانات البنية التحتية والعقد الذكي الحي",
-                contractLabel: "عنوان العقد المنشور:",
+                contractLabel: "عنوان عقد الضمان المنشور:",
                 arbiterLabel: "محفظة المحكّم والمالك:",
                 tokenLabel: "توكن الدفع والعمولة:",
                 feeLabel: "عمولة المنصة: 1.50% (150 BPS)",
@@ -298,6 +371,8 @@
                 saasInactive: "معطل",
                 tableTitle: "سجل الفواتير والتسويات التحكيمية الأخيرة",
                 tableBadge: "سجل SQLite / WAL المحمي",
+                btnNewKey: "إنشاء مفتاح API",
+                btnNewKeySub: "مفتاح جديد",
                 thId: "معرف الصفقة",
                 thBuyer: "وكيل الشراء",
                 thSeller: "وكيل البيع",
@@ -309,36 +384,35 @@
                 sigUnit: "توقيعاً",
                 tenantUnit: "شركات",
                 statusReleased: "مكتملة ومحررة",
-                etherscanLink: "فحص Etherscan"
+                explorerLink: "فحص BaseScan"
             }
         };
 
-        const initialSettlements = [
-            { id: "TX-94812", buyer: "Agent_Buyer_#1", seller: "GPU_Compute_Farm", amount: 2500, fee: 37.50 },
-            { id: "TX-94811", buyer: "Agent_Buyer_#2", seller: "Data_Provider_X", amount: 1800, fee: 27.00 },
-            { id: "TX-94810", buyer: "Autonomous_Coder", seller: "Model_Reviewer", amount: 950, fee: 14.25 },
-            { id: "TX-94809", buyer: "Agent_Buyer_#3", seller: "API_Service_Bot", amount: 3200, fee: 48.00 },
-            { id: "TX-94808", buyer: "Agent_Buyer_#4", seller: "Hosting_Cluster", amount: 2000, fee: 30.00 }
-        ];
-
-        let currentSettlements = initialSettlements;
+        let currentSettlements = [];
         let currentSaasKeys = [];
+        let explorerBaseUrl = "https://sepolia.basescan.org";
 
-        function renderRows(data) {
-            currentSettlements = data;
+        function renderRows(data, contractAddr) {
+            currentSettlements = data || [];
             const tbody = document.getElementById("settlement-rows");
             tbody.innerHTML = "";
             const t = i18n[currentLang];
 
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-4 px-4 text-center text-gray-500">No settled transactions yet.</td></tr>`;
+                return;
+            }
+
             data.forEach(item => {
                 const tr = document.createElement("tr");
                 tr.className = "hover:bg-gray-900/30 transition";
+                const explorerTarget = contractAddr || "0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C";
                 tr.innerHTML = `
                     <td class="py-3.5 px-4 font-bold text-gray-200">${item.id}</td>
                     <td class="py-3.5 px-4 text-gray-400">${item.buyer}</td>
                     <td class="py-3.5 px-4 text-gray-400">${item.seller}</td>
-                    <td class="py-3.5 px-4 font-bold text-white">$${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td class="py-3.5 px-4 text-emerald-400 font-bold">+$${item.fee.toFixed(2)}</td>
+                    <td class="py-3.5 px-4 font-bold text-white">$${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="py-3.5 px-4 text-emerald-400 font-bold">+$${Number(item.fee).toFixed(2)}</td>
                     <td class="py-3.5 px-4">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans font-medium">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -346,8 +420,8 @@
                         </span>
                     </td>
                     <td class="py-3.5 px-4">
-                        <a href="https://sepolia.etherscan.io/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-xs inline-flex items-center gap-1">
-                            ${t.etherscanLink}
+                        <a href="${explorerBaseUrl}/address/${explorerTarget}" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-xs inline-flex items-center gap-1">
+                            ${t.explorerLink}
                             <i data-lucide="external-link" class="w-3 h-3"></i>
                         </a>
                     </td>
@@ -405,6 +479,56 @@
             lucide.createIcons();
         }
 
+        function openKeyModal() {
+            document.getElementById("key-form-area").classList.remove("hidden");
+            document.getElementById("key-result-area").classList.add("hidden");
+            document.getElementById("m-org-name").value = "";
+            document.getElementById("key-modal").classList.remove("hidden");
+        }
+
+        function closeKeyModal() {
+            document.getElementById("key-modal").classList.add("hidden");
+            fetchData();
+        }
+
+        async function submitGenerateKey() {
+            const name = document.getElementById("m-org-name").value.trim();
+            const tier = document.getElementById("m-tier-select").value;
+            if (!name) {
+                alert("Please enter the organization name");
+                return;
+            }
+
+            const limits = { free: 100, pro: 1000, enterprise: 10000 };
+            const limit = limits[tier] || 100;
+
+            try {
+                const res = await fetch('/api/admin/tenants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, tier: tier, monthly_limit: limit })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("key-form-area").classList.add("hidden");
+                    document.getElementById("key-result-area").classList.remove("hidden");
+                    document.getElementById("generated-key-val").innerText = data.api_key;
+                } else {
+                    alert("Error creating API key");
+                }
+            } catch (err) {
+                alert("Network error: " + err);
+            }
+        }
+
+        function copyGeneratedKey() {
+            const key = document.getElementById("generated-key-val").innerText;
+            navigator.clipboard.writeText(key).then(() => {
+                alert("API Key copied to clipboard!");
+            });
+        }
+
         function toggleLanguage() {
             currentLang = (currentLang === 'en') ? 'ar' : 'en';
             const html = document.getElementById("html-root");
@@ -442,6 +566,8 @@
             document.getElementById("t-kpi-sigs-title").textContent = t.kpiSigsTitle;
             document.getElementById("t-kpi-sigs-sub").textContent = t.kpiSigsSub;
             document.getElementById("t-kpi-saas-title").textContent = t.kpiSaasTitle;
+            document.getElementById("t-btn-newkey").textContent = t.btnNewKey;
+            document.getElementById("t-btn-newkey-sub").textContent = t.btnNewKeySub;
             document.getElementById("t-infra-title").childNodes[2].textContent = ` ${t.infraTitle}`;
             document.getElementById("t-contract-label").textContent = t.contractLabel;
             document.getElementById("t-arbiter-label").textContent = t.arbiterLabel;
@@ -457,7 +583,6 @@
             document.getElementById("t-table-title").childNodes[2].textContent = ` ${t.tableTitle}`;
             document.getElementById("t-table-badge").textContent = t.tableBadge;
 
-            // عناوين الأعمدة
             document.getElementById("th-id").textContent = t.thId;
             document.getElementById("th-buyer").textContent = t.thBuyer;
             document.getElementById("th-seller").textContent = t.thSeller;
@@ -477,32 +602,52 @@
                 if (res.ok) {
                     const data = await res.json();
                     const t = i18n[currentLang];
-                    document.getElementById('total-volume').textContent = `$${data.total_volume.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-                    document.getElementById('total-revenue').textContent = `$${data.total_revenue.toFixed(2)}`;
-                    document.getElementById('settlement-count').textContent = `${data.total_deals} ${t.dealUnit}`;
-                    document.getElementById('signatures-verified').textContent = `${data.signatures_verified} ${t.sigUnit}`;
 
-                    // تحديث بيانات الـ SaaS
+                    if (data.explorer_base_url) {
+                        explorerBaseUrl = data.explorer_base_url;
+                    }
+
+                    // العناوين الديناميكية
+                    if (data.network) document.getElementById('network-name').textContent = data.network;
+                    if (data.contract_address) {
+                        const clink = document.getElementById('contract-link');
+                        clink.textContent = data.contract_address;
+                        clink.href = `${explorerBaseUrl}/address/${data.contract_address}`;
+                    }
+                    if (data.arbiter_wallet) {
+                        const alink = document.getElementById('arbiter-link');
+                        alink.textContent = data.arbiter_wallet;
+                        alink.href = `${explorerBaseUrl}/address/${data.arbiter_wallet}`;
+                    }
+                    if (data.usdc_address) {
+                        const ulink = document.getElementById('usdc-link');
+                        ulink.textContent = `${data.usdc_address} (USDC)`;
+                        ulink.href = `${explorerBaseUrl}/token/${data.usdc_address}`;
+                    }
+
+                    // البطاقات الإحصائية الحقيقية
+                    document.getElementById('total-volume').textContent = `$${Number(data.total_volume || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    document.getElementById('total-revenue').textContent = `$${Number(data.total_revenue || 0).toFixed(2)}`;
+                    document.getElementById('settlement-count').textContent = `${data.total_deals || 0} ${t.dealUnit}`;
+                    document.getElementById('signatures-verified').textContent = `${data.signatures_verified || 0} ${t.sigUnit}`;
+
+                    // بيانات المشتركين
                     document.getElementById('saas-tenants').textContent = `${data.saas_tenants_count || 0} ${t.tenantUnit}`;
                     document.getElementById('saas-usage').textContent = `${t.saasUsagePrefix} ${data.saas_total_usage || 0} ops`;
 
-                    if (data.settlements && data.settlements.length > 0) {
-                        renderRows(data.settlements);
-                    }
-                    if (data.saas_keys) {
-                        renderSaasRows(data.saas_keys);
-                    }
+                    // الجداول
+                    renderRows(data.settlements, data.contract_address);
+                    renderSaasRows(data.saas_keys);
                 }
             } catch (err) {
-                console.log("Using cached/fallback dataset:", err);
+                console.error("Dashboard synchronization error:", err);
             }
         }
 
-        // التهيئة الأولية
+        // التهيئة المباشرة
         lucide.createIcons();
-        renderRows(initialSettlements);
         fetchData();
-        setInterval(fetchData, 10000); // تحديث دوري كل 10 ثوانٍ
+        setInterval(fetchData, 8000); // مزامنة حية كل 8 ثوانٍ
     </script>
 </body>
 </html>

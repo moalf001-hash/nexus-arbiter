@@ -14,7 +14,7 @@ class EscrowBlockchainClient:
         
         artifact_path = os.path.join("build", "AgentEscrow.json")
         if not os.path.exists(artifact_path):
-            raise FileNotFoundError(f"لم يتم العثور على ملف ABI في المسار: {artifact_path}")
+            raise FileNotFoundError(f"ABI artifact file not found at path: {artifact_path}")
             
         with open(artifact_path, "r", encoding="utf-8") as f:
             artifact = json.load(f)
@@ -24,15 +24,15 @@ class EscrowBlockchainClient:
 
     @staticmethod
     def session_to_bytes32(session_id: UUID | str) -> bytes:
-        """تحويل معرّف الجلسة UUID (16 بايت) إلى bytes32 مكتمل (32 بايت) متوافق مع Solidity."""
+        """Convert a 16-byte UUID session identifier into a 32-byte Solidity-compatible bytes32 representation."""
         if isinstance(session_id, str):
             session_id = UUID(session_id)
-        # إكمال الـ 16 بايت المتبقية بأصفار ليطابق bytes32 تماماً
+        # Right-pad the remaining 16 bytes with zeros to strictly match bytes32
         return session_id.bytes.ljust(32, b"\x00")
 
     @staticmethod
     def usdc_to_units(amount_usdc: float) -> int:
-        """تحويل المبلغ العادي إلى وحدات Micro-USDC (6 خانات عشرية)."""
+        """Convert standard USDC amount to micro-USDC integer units (6 decimal places)."""
         return int(round(amount_usdc * 1_000_000))
 
     def build_lock_funds_tx(
@@ -45,7 +45,7 @@ class EscrowBlockchainClient:
         agreement_hash_hex: str
     ) -> dict:
         """
-        بناء كود المعاملة المشفر لحجز أموال الصفقة داخل العقد الذكي.
+        Build unsigned transaction data to lock escrow funds in the smart contract.
         """
         buyer = Web3.to_checksum_address(buyer_address)
         seller = Web3.to_checksum_address(seller_address)
@@ -69,10 +69,15 @@ class EscrowBlockchainClient:
 
     def build_settle_and_split_tx(self, sender_address: str, session_id: UUID | str) -> dict:
         """
-        بناء كود المعاملة لفك الحجز واقتطاع 1.5% للمنصة وتحويل الباقي للبائع.
+        Build unsigned transaction data to release funds, deduct the 1.5% platform fee, and disburse remainder to seller.
         """
         sender = Web3.to_checksum_address(sender_address)
         session_bytes = self.session_to_bytes32(session_id)
+
+        try:
+            gas_price = self.w3.eth.gas_price
+        except Exception:
+            gas_price = 100_000_000  # 0.1 Gwei default fallback
 
         tx_data = self.contract.functions.settleAndSplit(
             session_bytes
@@ -80,6 +85,6 @@ class EscrowBlockchainClient:
             "from": sender,
             "nonce": 0,
             "gas": 120000,
-            "gasPrice": self.w3.to_wei("0.1", "gwei")
+            "gasPrice": gas_price
         })
         return tx_data

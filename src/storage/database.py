@@ -7,7 +7,7 @@ from src.auth.keys import hash_api_key
 DB_PATH = os.path.join("nexus_arbiter.db")
 
 def get_connection():
-    """اتصال محصن بوضع WAL ومهلة انتظار لمنع أخطاء قفل الجداول."""
+    """Hardened connection with WAL mode and busy timeout to avoid database lock errors."""
     conn = sqlite3.connect(DB_PATH, timeout=15.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -16,11 +16,11 @@ def get_connection():
     return conn
 
 def init_db():
-    """تهيئة الجداول المشفرة والمالية بالإضافة إلى جداول B2B SaaS."""
+    """Initialize cryptographic, ledger, and B2B SaaS tenancy database schemas."""
     with get_connection() as conn:
         cursor = conn.cursor()
         
-        # جدول الجلسات
+        # Sessions ledger table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY,
@@ -35,7 +35,7 @@ def init_db():
             )
         """)
 
-        # جدول الرسائل والتواقيع الرقمية
+        # Messages and cryptographic signatures audit table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +51,7 @@ def init_db():
             )
         """)
 
-        # جدول الفواتير الضريبية والمعاملات المالية
+        # Tax invoices and escrow settlement ledger table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS invoices (
                 invoice_id TEXT PRIMARY KEY,
@@ -68,7 +68,7 @@ def init_db():
             )
         """)
 
-        # جدول الشركات والمشتركين (B2B Tenants)
+        # B2B SaaS tenants and enterprise subscriptions table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS tenants (
                 tenant_id TEXT PRIMARY KEY,
@@ -80,7 +80,7 @@ def init_db():
             )
         """)
 
-        # جدول مفاتيح API المشفرة (Hashed API Keys)
+        # Hashed API keys storage table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS api_keys (
                 key_hash TEXT PRIMARY KEY,
@@ -133,9 +133,9 @@ class StorageManager:
             """, (invoice_id, session_id, buyer, seller, total, fee, net, deliv_hash, inv_hash, calldata))
             conn.commit()
 
-    # ==========================
-    # دوال B2B SaaS وإدارة المفاتيح
-    # ==========================
+    # ==========================================
+    # B2B SaaS Tenancy & API Key Management
+    # ==========================================
 
     @staticmethod
     def create_tenant(tenant_id: str, name: str, tier: str = "free", monthly_limit: int = 100):
@@ -161,7 +161,7 @@ class StorageManager:
     @staticmethod
     def authenticate_api_key(raw_key: str) -> Optional[Dict[str, Any]]:
         """
-        التحقق من المفتاح وإرجاع تفاصيل المشترك إذا كان نشطاً ولم يتجاوز الحصة.
+        Authenticate API key and return tenant details if active and within quota.
         """
         if not raw_key:
             return None
@@ -182,12 +182,12 @@ class StorageManager:
     @staticmethod
     def increment_and_check_quota(tenant_id: str) -> bool:
         """
-        عملية ذرية (Atomic Transaction): تزيد العداد وتمنع التجاوز حتى مع هجمات التزامن (Race Conditions).
-        تعيد True إذا كان الطلب ضمن الحصة، و False إذا تجاوز الحصة.
+        Atomic transaction: increments usage counter and enforces monthly quota to prevent race conditions.
+        Returns True if the request is within quota, False if exceeded.
         """
         with get_connection() as conn:
             cursor = conn.cursor()
-        # فحص وزيادة ذرية
+            # Atomic quota check and increment
             cursor.execute("""
                 UPDATE tenants
                 SET current_usage = current_usage + 1

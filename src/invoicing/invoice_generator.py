@@ -19,18 +19,18 @@ class TaxCompliantInvoice(BaseModel):
     buyer_id: str
     seller_id: str
     item_description: str
-    deliverable_hash: str = Field(min_length=64, max_length=64, description="بصمة التقرير المستلم")
+    deliverable_hash: str = Field(min_length=64, max_length=64, description="Digest hash of the received deliverable")
     financials: InvoiceFeeBreakdown
     blockchain_network: str = "Base Sepolia"
     issued_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def canonical_bytes(self) -> bytes:
-        """تحويل الفاتورة إلى صيغة قياسية محكمة لحساب البصمة الرقمية."""
+        """Serialize invoice into deterministic canonical JSON bytes for cryptographic digest computation."""
         data = self.model_dump(mode="json")
         return json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
     def invoice_hash(self) -> str:
-        """توليد بصمة SHA-256 الرسمية للفاتورة لربطها بالمعاملة المالية."""
+        """Generate official SHA-256 invoice digest to bind with on-chain settlement and audit ledger."""
         return hashlib.sha256(self.canonical_bytes()).hexdigest()
 
 class InvoiceGenerator:
@@ -44,7 +44,7 @@ class InvoiceGenerator:
         deliverable_hash: str
     ) -> TaxCompliantInvoice:
         """
-        إنشاء وتوثيق الفاتورة الضريبية للصفقة واحتساب عمولة المنصة وحصص الأطراف.
+        Generate and persist tax-compliant deal invoice, calculating platform fee and party payouts.
         """
         fee_percent = 1.5
         fee_amount = round(amount_usdc * (fee_percent / 100), 2)

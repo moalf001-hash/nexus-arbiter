@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
 from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, FileResponse
 
-# 1. الاستيراد الموحد من الحزمة الأساسية مباشرة
+# 1. Direct imports from the unified schemas package
 from nexus_arbiter.schemas import (
     SignedNegotiationMessage,
     NegotiationPayload,
@@ -18,7 +18,7 @@ from nexus_arbiter.schemas import (
 )
 from nexus_arbiter.crypto.signatures import verify_signature
 
-# 2. استيراد آلة الحالة مع استثناءاتها الدقيقة
+# 2. State machine imports and granular exceptions
 from src.core.fsm import (
     NegotiationSession,
     FSMException,
@@ -31,7 +31,7 @@ from src.invoicing.invoice_generator import InvoiceGenerator
 from src.blockchain.escrow_client import EscrowBlockchainClient
 from src.storage.database import StorageManager
 
-# 3. استيراد طبقة حماية ومصادقة B2B SaaS
+# 3. B2B SaaS authentication and security layers
 from src.auth.middleware import verify_tenant_access
 from src.auth.keys import generate_api_key
 
@@ -54,7 +54,7 @@ MAX_CONTENT_LENGTH = 128 * 1024  # 128 KB max payload size
 
 
 def get_db_path() -> Optional[str]:
-    """تحديد مسار ملف قاعدة بيانات SQLite المحلية."""
+    """Resolve path to local SQLite database file."""
     if hasattr(StorageManager, "DB_PATH"):
         return getattr(StorageManager, "DB_PATH")
     if hasattr(StorageManager, "db_path"):
@@ -80,19 +80,24 @@ async def serve_dashboard():
     dashboard_path = os.path.join(os.getcwd(), "templates", "dashboard.html")
     if os.path.exists(dashboard_path):
         return FileResponse(dashboard_path)
-    return HTMLResponse("<h1>ملف dashboard.html غير موجود في مجلد templates/</h1>", status_code=404)
+    return HTMLResponse("<h1>dashboard.html not found in templates/ directory</h1>", status_code=404)
 
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
     contract_addr = os.getenv("ESCROW_CONTRACT_ADDRESS", "0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C")
-    arbiter_addr = os.getenv("ARBITER_WALLET_ADDRESS", "0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685")
+    arbiter_addr = os.getenv("ARBITER_ADDRESS") or os.getenv("ARBITER_WALLET_ADDRESS", "0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685")
+    usdc_addr = os.getenv("USDC_TOKEN_ADDRESS", "0x036CbD53842c5426634e7929541eC2318f3dCF7e")
+    chain_id = os.getenv("CHAIN_ID", "84532")
 
     stats = {
-        "protocol": "NexusArbiter v1.5.1",
-        "network": "Ethereum Sepolia (11155111)",
+        "protocol": "NexusArbiter v1.5.2",
+        "network": f"Base Sepolia ({chain_id})",
+        "chain_id": int(chain_id) if chain_id.isdigit() else 84532,
         "contract_address": contract_addr,
         "arbiter_wallet": arbiter_addr,
+        "usdc_address": usdc_addr,
+        "explorer_base_url": "https://sepolia.basescan.org",
         "total_volume": 10450.00,
         "total_revenue": 156.75,
         "take_rate_bps": 150,
@@ -188,8 +193,7 @@ async def get_dashboard_stats():
     except Exception as e:
         print(f"[NexusArbiter Dashboard] DB query notice: {e}")
 
-
-    # إضافة إحصائيات الـ SaaS والشركات
+    # Aggregate B2B SaaS tenancy and key analytics
     try:
         if db_path and os.path.exists(db_path):
             with sqlite3.connect(db_path) as s_conn:
@@ -199,7 +203,7 @@ async def get_dashboard_stats():
                 t_count, t_usage = s_cur.fetchone()
                 stats["saas_tenants_count"] = int(t_count)
                 stats["saas_total_usage"] = int(t_usage)
-                
+
                 s_cur.execute("SELECT t.name, t.tier, t.current_usage, t.monthly_limit, k.prefix, k.is_active FROM api_keys k JOIN tenants t ON k.tenant_id = t.tenant_id LIMIT 5")
                 stats["saas_keys"] = [dict(r) for r in s_cur.fetchall()]
     except Exception as e:
@@ -223,7 +227,7 @@ async def security_guard_middleware(request: Request, call_next):
     client_ip = request.client.host if request.client else "127.0.0.1"
     now = time.time()
 
-    # تنظيف الطوابع الزمنية مع تفريغ الذاكرة للـ IPs المنتهية
+    # Clean stale timestamps and release memory for expired client IPs
     valid_timestamps = [t for t in rate_limit_records[client_ip] if now - t < WINDOW_SECONDS]
     if valid_timestamps:
         rate_limit_records[client_ip] = valid_timestamps
@@ -287,7 +291,7 @@ def health_check():
 @app.post("/api/admin/tenants", status_code=status.HTTP_201_CREATED, tags=["B2B SaaS Admin"])
 def register_tenant(req: TenantCreateRequest):
     """
-    تسجيل شركة جديدة وتوليد مفتاح API بصيغة مشفرة مع تحديد الحصة الشهرية.
+    Register a new tenant organization and issue a hashed API key with quota controls.
     """
     tenant_id = f"tenant_{uuid.uuid4().hex[:8]}"
     raw_key, key_hash, prefix = generate_api_key()
@@ -336,7 +340,7 @@ def handle_negotiation_step(
         session = NegotiationSession(session_id=message.session_id)
         sessions_db[message.session_id] = session
 
-    # معالجة دقيقة للاستثناءات المنطقية برموز HTTP دقيقة
+    # Strict logical exception handling mapped to discrete HTTP status codes
     try:
         session.apply_transition(message)
     except TurnViolationError as e:
