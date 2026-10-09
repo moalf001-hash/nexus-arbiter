@@ -5,9 +5,12 @@ import uuid
 from uuid import UUID
 from typing import Optional
 from collections import defaultdict
-from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
+from fastapi import FastAPI, HTTPException, Request, Response, status, Depends, Query
 from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, FileResponse
+from src.registry.discovery import SecureAgentRegistry, AgentRegistrationRequest
+# Initialize global secure registry instance
+agent_registry = SecureAgentRegistry()
 
 # 1. Direct imports from the unified schemas package
 from nexus_arbiter.schemas import (
@@ -52,6 +55,63 @@ MAX_REQUESTS_PER_WINDOW = 60
 WINDOW_SECONDS = 60
 MAX_CONTENT_LENGTH = 128 * 1024  # 128 KB max payload size
 
+@app.post(
+    "/registry/register",
+    tags=["Marketplace Registry"],
+    summary="Register a verified agent service",
+    status_code=status.HTTP_201_CREATED
+)
+async def register_agent_endpoint(payload: AgentRegistrationRequest):
+    """
+    Registers an agent service capability profile.
+    Enforces SSRF prevention on endpoint_url and Ed25519 signature verification.
+    """
+    try:
+        result = agent_registry.register_agent(payload)
+        return result
+    except ValueError as e:
+        # SSRF or URL validation error
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        # Cryptographic signature verification failed
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration error: {str(e)}"
+        )
+
+
+@app.get(
+    "/registry/search",
+    tags=["Marketplace Registry"],
+    summary="Search verified marketplace capabilities"
+)
+async def search_services_endpoint(
+    category: Optional[str] = Query(None, description="Filter by service category (e.g., analytics, compute)"),
+    max_price: Optional[float] = Query(None, gt=0, description="Maximum price limit in USDC")
+):
+    """
+    Queries active agent capabilities filtered by category and max_price.
+    Excludes stale agents.
+    """
+    try:
+        results = agent_registry.search_services(category=category, max_price=max_price)
+        return {
+            "total_matches": len(results),
+            "services": results
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search query error: {str(e)}"
+        )
 
 def get_db_path() -> Optional[str]:
     """Resolve path to local SQLite database file."""
