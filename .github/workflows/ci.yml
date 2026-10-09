@@ -31,5 +31,7 @@ jobs:
           cp .env.example .env
 
       - name: Run 7-Point Security Penetration Suite
+        env:
+          PYTHONPATH: .
         run: |
           python scripts/comprehensive_security_audit.py
