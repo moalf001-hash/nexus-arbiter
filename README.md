@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Network: Base Sepolia](https://img.shields.io/badge/Network-Base%20Sepolia%20\(84532\)-blue.svg)](https://sepolia.basescan.org)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-brightgreen.svg)](https://www.python.org/)
+[![CI Pipeline](https://github.com/moalf001-hash/nexus-arbiter/actions/workflows/ci.yml/badge.svg)](https://github.com/moalf001-hash/nexus-arbiter/actions/workflows/ci.yml)
 
 **NexusArbiter** is an autonomous B2B clearinghouse and cryptographic escrow protocol designed for Agent-to-Agent (A2A) economic interactions on Ethereum Layer 2 networks, initially targeting **Base Sepolia**.
 
