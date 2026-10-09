@@ -1,96 +1,252 @@
-# 🛡️ NexusArbiter: Autonomous Escrow & Deterministic Arbitration Protocol
+﻿
+# NexusArbiter (v2.0.0)
 
-[![Base Sepolia](https://img.shields.io/badge/Network-Base%20Sepolia%20(L2)-blue)](https://sepolia.basescan.org/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C)
-[![Contract Verified](https://img.shields.io/badge/BaseScan-Verified%20Contract-brightgreen)](https://sepolia.basescan.org/address/0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C#code)
-[![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-lightgrey)](https://soliditylang.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-v1.5.1-009688.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Network: Base Sepolia](https://img.shields.io/badge/Network-Base%20Sepolia%20\(84532\)-blue.svg)](https://sepolia.basescan.org)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-brightgreen.svg)](https://www.python.org/)
 
-An institutional-grade, non-custodial escrow and deterministic dispute resolution protocol engineered for autonomous AI agents engaging in machine-to-machine (M2M) service exchanges and micropayments.
+**NexusArbiter** is an autonomous B2B clearinghouse and cryptographic escrow protocol designed for Agent-to-Agent (A2A) economic interactions on Ethereum Layer 2 networks, initially targeting **Base Sepolia**.
 
----
+It connects off-chain negotiations between autonomous agents with on-chain settlement workflows, focusing on cryptographic identity, Proof of Delivery (PoD), price commitment integrity, and deterministic state transitions.
 
-## 🏛️ System Architecture
+> **Status:** Development and testing project. Security and production readiness have not been independently verified.
 
-NexusArbiter decouples off-chain cryptographic negotiation from on-chain monetary settlement to achieve zero counterparty risk, sub-second execution, and low-cost Layer 2 finality.
+## Table of Contents
 
-+-----------------------------------------------------------------------------------+
-|                              Off-Chain Agent Layer                                |
-|                                                                                   |
-|  [Buyer Agent] <--- Ed25519 Commitment Exchange ---> [Seller Agent]                |
-|         \                                                    /                    |
-|          \--- Signed Terms + SLA ---> [Arbiter API] <-------/                     |
-+---------------------------------------------|-------------------------------------+
-                                              | Deterministic PoD Verification
-                                              v
-+-----------------------------------------------------------------------------------+
-|                          Base Sepolia L2 Smart Contract                           |
-|                                                                                   |
-|                      +-----------------------------+                              |
-|                      |      AgentEscrow.sol        |                              |
-|                      +-----------------------------+                              |
-|                         /            |            \                               |
-|          lockFunds() --/             |             \-- settleAndSplit()           |
-|                                 refundBuyer()                                     |
-|                                      |                                            |
-|       [Buyer Refund] <---------------+---------------> [Seller Pay + 1.5% Cut]    |
-+-----------------------------------------------------------------------------------+
+* [Key Features](#key-features)
+* [System Architecture](#system-architecture)
+* [Project Structure](#project-structure)
+* [Getting Started](#getting-started)
+* [Environment Configuration](#environment-configuration)
+* [Running the Platform](#running-the-platform)
+* [Security Audit](#security-audit)
+* [Security Considerations](#security-considerations)
+* [License](#license)
 
----
+## Key Features
 
-## 🔒 Security Invariants & Verification Results
+* **Cryptographic Identity:** Ed25519 digital signatures for message authentication and state transition verification.
+* **Encrypted Negotiations:** X25519 key agreement for establishing shared secrets between agents.
+* **Anti-Price Spoofing:** Signed price commitments designed to prevent unauthorized settlement amount changes.
+* **Deterministic Finite State Machine (FSM):** Enforces negotiation states, participant roles, and permitted transitions.
+* **Multi-Tenant API:** Tenant-aware authentication and rate limiting.
+* **Persistent Storage:** SQLite database with Write-Ahead Logging (WAL) mode.
+* **Settlement Preparation:** Generates unsigned Solidity-compatible calldata for escrow transactions.
+* **Invoice Generation:** Supports structured invoice generation and a platform fee intended to be 1.5%.
 
-The protocol has undergone comprehensive threat modeling and negative invariant verification:
+## System Architecture
 
-1. Reentrancy Immunity (CEI Pattern): The settleAndSplit routine implements strict Checks-Effects-Interactions, updating state storage to EscrowStatus.SETTLED prior to external ERC-20 token transfers.
-2. Anti-Price Spoofing (Ed25519 Signatures): Off-chain commitments mandate raw cryptographic binding between session parameters, timestamps, and negotiated amounts, completely neutralizing replay and price-spoofing attacks.
-3. Role & Modifier Boundaries: Core settlement and administrative paths are guarded on-chain via EVM modifiers (onlyArbiterOrBuyer and onlyPlatformOwner), deterministically reverting unauthorized fund drain attempts (EVM Revert: Unauthorized).
-4. Deterministic SLA Enforcement: Guarantees programmatic buyer recovery via refundBuyer upon breach of delivery SLAs without centralized manual intervention.
+```text
+┌─────────────────────┐       ┌─────────────────────┐
+│     Buyer Agent     │       │    Seller Agent     │
+│   Ed25519 / X25519  │       │   Ed25519 / X25519  │
+└──────────┬──────────┘       └──────────┬──────────┘
+           │                             │
+           └─────────────┬───────────────┘
+                         │
+               Signed Negotiations
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │     NexusArbiter Gateway     │
+          │           FastAPI            │
+          ├──────────────────────────────┤
+          │ Tenant Authentication        │
+          │ Signature Verification       │
+          │ FSM Transition Validation    │
+          │ Price Commitment Checks      │
+          │ Proof of Delivery Verification│
+          │ SLA and Quota Enforcement     │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │     Settlement Preparation   │
+          │  Invoice + Unsigned Calldata │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │      AgentEscrow.sol         │
+          │   Base Sepolia (84532)       │
+          ├──────────────────────────────┤
+          │ Seller Payout                │
+          │ Platform Fee                 │
+          └──────────────────────────────┘
+```
 
----
+## Project Structure
 
-## 🚀 Live On-Chain Deployment
+```text
+nexus-arbiter/
+├── build/
+│   └── AgentEscrow.json
+├── scripts/
+│   ├── comprehensive_security_audit.py
+│   └── demo_negotiation_e2e.py
+├── src/
+│   ├── api/
+│   │   └── server.py
+│   ├── arbiter/
+│   │   └── verification.py
+│   ├── auth/
+│   │   ├── keys.py
+│   │   └── middleware.py
+│   ├── blockchain/
+│   │   └── escrow_client.py
+│   ├── core/
+│   │   └── fsm.py
+│   ├── invoicing/
+│   │   └── invoice_generator.py
+│   ├── sdk/
+│   │   └── agent_client.py
+│   └── storage/
+│       └── database.py
+├── templates/
+│   └── dashboard.html
+├── .env.example
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
 
-| Parameter | Value |
-| :--- | :--- |
-| Network | Base Sepolia (Ethereum L2) |
-| Chain ID | 84532 |
-| Contract Address | 0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C |
-| Deployment Tx | 0x579498566fa868f66f3b5dc103b76a8e34a6d5b9e379697530a9fc19b699f9ab |
-| Contract Status | Verified Public Source Code (Exact Bytecode Match) |
-| Settlement Token | Testnet USDC (0x036CbD53842c5426634e7929541eC2318f3dCF7e) |
-| Protocol Take Rate | 1.5% platform cut dynamically routed upon proof of delivery |
+## Getting Started
 
----
+### Prerequisites
 
-## ⚡ Quickstart & Local Reproduction
+* Python 3.11 or later
+* Git
+* A terminal or command-line environment
+* Access to a Base Sepolia RPC endpoint for blockchain interactions
 
-### 1. Installation
+### 1. Clone the Repository
+
+```bash
 git clone https://github.com/moalf001-hash/nexus-arbiter.git
 cd nexus-arbiter
+```
 
+### 2. Create a Virtual Environment
+
+**Windows (PowerShell):**
+
+```powershell
 python -m venv venv
-# On Windows:
 .\venv\Scripts\Activate.ps1
-# On Linux/macOS:
+```
+
+**Linux / macOS:**
+
+```bash
+python3 -m venv venv
 source venv/bin/activate
+```
 
+### 3. Install Dependencies
+
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
 
-### 2. Launch Arbiter Gateway & Dashboard
+## Environment Configuration
+
+Create a `.env` file from `.env.example`:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure the following environment variables in `.env`:
+
+```dotenv
+ESCROW_CONTRACT_ADDRESS=0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C
+ARBITER_WALLET_ADDRESS=0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685
+USDC_TOKEN_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+RPC_URL=https://sepolia.base.org
+CHAIN_ID=84532
+```
+
+| Variable                  | Description                      |
+| ------------------------- | -------------------------------- |
+| `ESCROW_CONTRACT_ADDRESS` | Deployed escrow contract address |
+| `ARBITER_WALLET_ADDRESS`  | Arbiter wallet address           |
+| `USDC_TOKEN_ADDRESS`      | USDC token contract address      |
+| `RPC_URL`                 | Base Sepolia JSON-RPC endpoint   |
+| `CHAIN_ID`                | Network chain ID (`84532`)       |
+
+**Security notes:**
+
+* Never commit `.env` or private keys to GitHub.
+* Keep sensitive credentials out of source code.
+* Verify all contract addresses before interacting with the blockchain.
+* Ensure `.gitignore` excludes secret files and virtual environments.
+
+## Running the Platform
+
+### Start the API Gateway
+
+```powershell
 uvicorn src.api.server:app --reload --port 8000
-- Interactive Operations Dashboard: http://127.0.0.1:8000/dashboard
-- Swagger API Specifications: http://127.0.0.1:8000/docs
+```
 
-### 3. Run Autonomous Simulation & Security Audits
-# Execute end-to-end M2M agent negotiation and escrow settlement
-python run_full_simulation.py
+### API Endpoints
 
-# Execute negative security edge cases and static verification suite
-python scripts/verify_edge_cases.py
-python scripts/static_analysis_audit.py
+* **Swagger UI:** http://127.0.0.1:8000/docs
+* **ReDoc:** http://127.0.0.1:8000/redoc
+* **Dashboard:** http://127.0.0.1:8000/dashboard
 
----
+These endpoints require the application to expose the corresponding routes.
 
-## 📄 License
-Distributed under the MIT License. See LICENSE for details.
+### Run the End-to-End Negotiation Demo
+
+```powershell
+python scripts/demo_negotiation_e2e.py
+```
+
+Expected lifecycle:
+
+```text
+Propose -> Counter -> Accept -> Deliver -> Settle
+```
+
+### Run the Security Audit
+
+```powershell
+python scripts/comprehensive_security_audit.py
+```
+
+## Security Audit
+
+The project includes a test suite intended to cover seven security-related areas.
+
+| # | Security Check             | Expected Behavior                                        |
+| - | -------------------------- | -------------------------------------------------------- |
+| 1 | Payload Size Limits        | Reject oversized requests with HTTP 413 where configured |
+| 2 | SQL Injection Resistance   | Use parameterized queries                                |
+| 3 | Atomic Quota Enforcement   | Prevent quota bypasses under concurrent requests         |
+| 4 | Signature Verification     | Reject invalid Ed25519 signatures                        |
+| 5 | Price Commitment Integrity | Detect unauthorized settlement amount changes            |
+| 6 | FSM Role Integrity         | Enforce valid state transitions and participant roles    |
+| 7 | SLA Deadline Enforcement   | Reject deliveries that violate configured deadlines      |
+
+> **Note:** These are intended test cases, not independently verified results. Report successful checks only after running and reviewing the test suite.
+
+## Security Considerations
+
+* **Replay Protection:** Bind messages to sessions, participants, and unique nonces or sequence numbers.
+* **Canonical Serialization:** Ensure signatures and commitments use identical data representations.
+* **Key Management:** Protect signing keys and use secure key derivation and authenticated encryption.
+* **Database Concurrency:** Test quota enforcement under concurrent requests.
+* **Smart Contract Security:** Review access controls, token transfers, fee calculations, and failure handling.
+* **Settlement Verification:** Confirm transaction receipts and on-chain state before reporting settlement as complete.
+* **Invoice Compliance:** Verify tax and invoicing requirements for the applicable jurisdiction.
+* **Production Deployment:** Configure monitoring, secret management, dependency updates, and API rate limits.
+
+Cryptographic algorithms alone do not guarantee protocol security. Correct implementation and secure key management are also required.
+
+## License
+
+This project is intended to be distributed under the MIT License.
+
+See the [MIT License](https://opensource.org/licenses/MIT) for details. Ensure the repository contains a `LICENSE` file with the appropriate license text.
