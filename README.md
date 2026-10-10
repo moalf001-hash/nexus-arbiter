@@ -12,10 +12,24 @@ It connects off-chain negotiations between autonomous agents with on-chain settl
 
 > **Release:** `v2.1.0-stable`
 >
-> **Reported Security Status:** Static analysis completed with 0 Bandit issues, CWE-89 mitigations implemented through SQL whitelisting, and a reported 100% test pass rate. These results should be confirmed against the latest CI logs and test reports before production deployment.
+> **Reported Security Status:** Static analysis completed (0 Bandit issues), CWE-89 mitigations implemented via strict SQL whitelisting, and a reported 100% test pass rate. These claims should be verified against current CI and audit reports before production use.
+
+---
+
+## 🌐 Live Gateway & Interactive Demos
+
+Experience the protocol through the public deployment tunnel:
+
+- 📊 **Live Telemetry Dashboard:** [Open Dashboard](https://converted-intersection-cove-basically.trycloudflare.com/dashboard)
+- 📑 **Interactive Swagger UI:** [Open API Documentation](https://converted-intersection-cove-basically.trycloudflare.com/docs)
+
+> **Availability Notice:** These endpoints use a Cloudflare temporary tunnel. Availability depends on the tunnel and backend server remaining active. The links have not been independently verified.
+
+---
 
 ## Table of Contents
 
+- [Live Gateway & Interactive Demos](#-live-gateway--interactive-demos)
 - [Key Features](#key-features)
 - [System Architecture](#system-architecture)
 - [Project Structure](#project-structure)
@@ -30,17 +44,17 @@ It connects off-chain negotiations between autonomous agents with on-chain settl
 
 - **Cryptographic Identity:** Ed25519 digital signatures for message authentication and state transition verification.
 - **Encrypted Negotiations:** X25519 key agreement for establishing shared secrets between agents in End-to-End Encrypted (E2EE) sessions.
-- **Secure Marketplace Registry:** Cryptographically verified agent discovery through `/registry/register` and `/registry/search`, with SSRF defenses against private, loopback, and cloud-metadata endpoints.
-- **Anti-Price Spoofing Guard:** Cryptographically signed buyer price commitments designed to prevent unauthorized settlement amount modifications.
+- **Secure Marketplace Registry:** Cryptographically verified agent discovery (`/registry/register` and `/registry/search`) with SSRF defenses against private, loopback, and cloud-metadata endpoints.
+- **Anti-Price Spoofing Guard:** Signed buyer price commitments designed to prevent unauthorized settlement amount modifications.
 - **Deterministic Finite State Machine (FSM):** Enforces negotiation states, participant turn order, and permitted transitions.
-- **Multi-Tenant B2B SaaS Authentication:** SHA-256 hashed API keys, monthly quota enforcement, and sliding-window rate limiting.
-- **Persistent Storage:** SQLite database using Write-Ahead Logging (WAL) and strict SQL query whitelisting.
+- **Multi-Tenant B2B SaaS Authentication:** SHA-256 hashed API keys with monthly quota enforcement and sliding-window rate limiting.
+- **Persistent Storage:** SQLite with Write-Ahead Logging (WAL) and strict SQL query whitelisting.
 - **Settlement Preparation:** Generates unsigned Solidity-compatible calldata for `AgentEscrow.sol` on Base Sepolia.
 - **Automated Invoicing:** Generates structured cryptographic invoices with an integrated 1.5% platform fee mechanism.
 
 ## System Architecture
 
-```text
+```text id="cs14qy"
 ┌─────────────────────┐       ┌─────────────────────┐
 │     Buyer Agent     │       │    Seller Agent     │
 │   Ed25519 / X25519  │       │   Ed25519 / X25519  │
@@ -82,18 +96,18 @@ It connects off-chain negotiations between autonomous agents with on-chain settl
 
 ### Negotiation Lifecycle
 
-1. **Propose:** The buyer initiates a signed negotiation.
-2. **Counter:** The seller submits a signed counteroffer.
-3. **Accept:** The buyer accepts the terms and establishes a signed price commitment.
-4. **Deliver:** The seller submits the agreed deliverable and its Proof of Delivery.
-5. **Verify:** The gateway validates signatures, FSM transitions, commitments, and applicable delivery conditions.
-6. **Settle:** The settlement engine prepares unsigned calldata for the escrow contract.
+1. **Propose:** Buyer initiates a signed negotiation.
+2. **Counter:** Seller submits a signed counteroffer.
+3. **Accept:** Buyer accepts the terms and establishes a price commitment.
+4. **Deliver:** Seller submits the agreed deliverable and Proof of Delivery.
+5. **Verify:** Gateway validates signatures, commitments, negotiation state, and delivery conditions.
+6. **Settle:** Settlement engine prepares unsigned calldata for the escrow contract.
 
-> **Note:** Generating unsigned calldata does not itself execute or confirm an on-chain transaction.
+> Generating unsigned calldata does not itself execute or confirm an on-chain transaction.
 
 ## Project Structure
 
-```text
+```text id="xw1cqg"
 nexus-arbiter/
 ├── build/
 │   └── AgentEscrow.json
@@ -144,7 +158,7 @@ nexus-arbiter/
 
 ### 1. Clone the Repository
 
-```bash
+```bash id="5nwpv7"
 git clone https://github.com/moalf001-hash/nexus-arbiter.git
 cd nexus-arbiter
 ```
@@ -153,51 +167,44 @@ cd nexus-arbiter
 
 **Windows (PowerShell):**
 
-```powershell
+```powershell id="cph4md"
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-**Windows (Command Prompt):**
-
-```bat
-python -m venv venv
-venv\Scripts\activate.bat
-```
-
 **Linux / macOS:**
 
-```bash
+```bash id="a6y7la"
 python3 -m venv venv
 source venv/bin/activate
 ```
 
 ### 3. Install Dependencies
 
-```bash
+```bash id="d9wmw8"
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
 ## Environment Configuration
 
-Create a `.env` file from `.env.example`.
+Create a `.env` file from `.env.example`:
 
 **Windows (PowerShell):**
 
-```powershell
+```powershell id="8b5n1j"
 Copy-Item .env.example .env
 ```
 
 **Linux / macOS:**
 
-```bash
+```bash id="v02qlu"
 cp .env.example .env
 ```
 
 Configure the following environment variables:
 
-```dotenv
+```dotenv id="suxh5b"
 ESCROW_CONTRACT_ADDRESS=0xF2D0F7cb12dF286ABba3683810E4228A4e72C61C
 ARBITER_WALLET_ADDRESS=0x082b38aeA5D1bB7FEF3C16818f2E76809f2bA685
 USDC_TOKEN_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
@@ -218,99 +225,90 @@ CHAIN_ID=84532
 ### Security Notes
 
 - Never commit `.env` or private keys to GitHub.
-- Keep sensitive credentials out of source code and application logs.
-- Verify contract addresses before blockchain interactions.
+- Keep sensitive credentials out of source code and logs.
+- Verify contract addresses before interacting with the blockchain.
 - Ensure `.gitignore` excludes database files (`*.db`), secret files, and virtual environments.
-- Use secure secret management for production environments.
+- Use secure secret management for production deployments.
 
 ## Running the Platform
 
 ### Start the API Gateway
 
-```powershell
+```powershell id="hgz2ei"
 uvicorn src.api.server:app --reload --port 8000
 ```
 
-The `--reload` flag is intended for development environments.
+The `--reload` option is intended for local development.
 
 ### API Endpoints
 
-| Endpoint | URL |
+| Service | Endpoint |
 |---|---|
-| Swagger UI | http://127.0.0.1:8000/docs |
-| ReDoc | http://127.0.0.1:8000/redoc |
-| Dashboard | http://127.0.0.1:8000/dashboard |
-| Health Check | http://127.0.0.1:8000/health |
-
-These endpoints require the application to expose the corresponding routes.
+| Live Dashboard | [Public Dashboard](https://converted-intersection-cove-basically.trycloudflare.com/dashboard) |
+| Live Swagger UI | [Public API Docs](https://converted-intersection-cove-basically.trycloudflare.com/docs) |
+| Local Dashboard | http://127.0.0.1:8000/dashboard |
+| Local Swagger UI | http://127.0.0.1:8000/docs |
+| Local Health Check | http://127.0.0.1:8000/health |
 
 ### Run Verification & Test Suites
 
 **1. Run the core protocol test suite:**
 
-```powershell
+```powershell id="5xobzo"
 pytest -v
 ```
 
 **2. Run marketplace security and SSRF tests:**
 
-```powershell
+```powershell id="szz9ud"
 python scripts/test_registry_security.py
 ```
 
-**3. Run static code security analysis with Bandit:**
+**3. Run static code security analysis (Bandit):**
 
-```powershell
+```powershell id="1dxf2v"
 bandit -r src/ -ll
 ```
 
 **4. Run the comprehensive security audit:**
 
-```powershell
+```powershell id="dv4mfo"
 python scripts/comprehensive_security_audit.py
 ```
 
 ### Run the End-to-End Negotiation Demo
 
-```powershell
+```powershell id="6c5kbu"
 python scripts/demo_negotiation_e2e.py
 ```
 
-Expected negotiation lifecycle:
+Expected lifecycle:
 
-```text
+```text id="v1v4dm"
 Propose -> Counter -> Accept -> Deliver -> Settle
 ```
 
-### Run Settlement Tests
-
-```powershell
-python scripts/test_live_settlement.py
-```
-
-> **Warning:** Review the settlement test implementation and configured network before running it. Depending on the implementation, this script may interact with a blockchain and incur transaction fees.
-
 ## Security Audit & Compliance
 
-NexusArbiter documents a multi-layered security testing matrix covering the following areas.
+NexusArbiter documents a multi-layered security matrix.
 
 | # | Security Domain | Implementation & Verification Details | Reported Status |
 |---|---|---|---|
-| 1 | Payload Size Limits | Enforces a 128 KB maximum request body size; returns HTTP 413 | PASSED |
-| 2 | SQL Injection (CWE-89) | Strict table and column whitelisting on dynamic queries | VERIFIED |
-| 3 | SSRF Protection | Rejects loopback, private IP, and link-local endpoints | PASSED |
-| 4 | Rate Limiting | 60 requests/minute per IP; returns HTTP 429 | ACTIVE |
-| 5 | Signature Verification | Ed25519 cryptographic authentication for protocol transitions | PASSED |
-| 6 | Price Spoofing Guard | Buyer-signed price commitments for negotiation sessions | PASSED |
-| 7 | FSM State Integrity | Deterministic sequence numbers and strict turn validation | PASSED |
+| 1 | **Payload Size Limits** | Enforces 128 KB maximum body size; returns HTTP 413 | PASSED |
+| 2 | **SQL Injection (CWE-89)** | Strict table and column whitelisting on dynamic queries | VERIFIED |
+| 3 | **SSRF Protection** | Rejects loopback, private IP, and link-local endpoints | PASSED |
+| 4 | **Rate Limiting** | 60 requests/minute per IP; returns HTTP 429 | ACTIVE |
+| 5 | **Signature Verification** | Ed25519 cryptographic authentication for protocol transitions | PASSED |
+| 6 | **Price Spoofing Guard** | Buyer-signed price commitments for negotiation sessions | PASSED |
+| 7 | **FSM State Integrity** | Deterministic sequence numbers and strict turn validation | PASSED |
 
-> **Verification Notice:** The statuses above are project-reported. Re-run the relevant tests and inspect CI artifacts before relying on these results. Static analysis and automated tests are not substitutes for an independent security assessment.
+> **Audit Notice:** The statuses above are project-reported. They should be verified through current test results and CI logs. Passing automated tests or static analysis does not establish that the protocol is free of vulnerabilities.
 
-### Static Analysis
+### Static Security Analysis
 
-Bandit can be used to inspect the Python source tree for selected security-related patterns:
+Run Bandit against the Python source directory:
 
-```powershell
+```powershell id="2rm69e"
 bandit -r src/ -ll
 ```
 
@@ -318,23 +316,23 @@ A clean Bandit result does not prove the absence of SQL injection, SSRF, cryptog
 
 ### Continuous Integration
 
-The repository references a GitHub Actions workflow:
+View the GitHub Actions workflow:
 
-[View CI Pipeline](https://github.com/moalf001-hash/nexus-arbiter/actions/workflows/ci.yml)
+[GitHub Actions — CI Pipeline](https://github.com/moalf001-hash/nexus-arbiter/actions/workflows/ci.yml)
 
-The CI badge reflects the workflow status only when `.github/workflows/ci.yml` exists and GitHub Actions is configured correctly.
+The CI badge requires an existing and correctly configured `.github/workflows/ci.yml` workflow.
 
 ## Security Considerations
 
 - **Replay Protection:** Bind messages to unique session IDs, participants, and deterministic sequence counters.
-- **Canonical Serialization:** Ensure signatures and price commitments use identical, stable JSON serialization rules.
-- **Key Management:** Protect signing keys using secure secret managers or hardware-backed key storage where appropriate.
-- **Database Concurrency:** Verify transaction isolation, quota enforcement, and integrity under concurrent requests.
-- **SSRF Protection:** Validate resolved destination IP addresses and redirects, and restrict outbound network access where possible.
-- **Rate Limiting:** Consider trusted proxy configuration and distributed rate limiting for multi-instance deployments.
-- **Smart Contract Security:** Review access controls, reentrancy, token handling, fee calculations, and transaction failure scenarios.
-- **Settlement Verification:** Confirm transaction receipts and the required on-chain state before reporting settlement as successful.
-- **Operational Security:** Use dependency scanning, audit logging, monitoring, and secure deployment configuration.
+- **Canonical Serialization:** Ensure signatures and price commitments use identical, stable JSON serialization.
+- **Key Management:** Protect signing keys using hardware-backed storage or secure secrets managers where appropriate.
+- **Database Concurrency:** Verify transactional integrity and quota enforcement under concurrent requests.
+- **SSRF Protection:** Validate destination addresses, DNS resolution, and redirects, and restrict outbound network access.
+- **Rate Limiting:** Configure trusted proxies and distributed limits for multi-instance deployments.
+- **Smart Contract Security:** Review access controls, token handling, reentrancy risks, fee calculations, and failure recovery.
+- **Settlement Verification:** Confirm transaction receipts and on-chain state before reporting successful settlement.
+- **Production Operations:** Configure monitoring, logging, dependency scanning, and secure deployment practices.
 
 ## License
 
