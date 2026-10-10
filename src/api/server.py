@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, status, Depends, 
 from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, FileResponse
 from src.registry.discovery import SecureAgentRegistry, AgentRegistrationRequest
+
 # Initialize global secure registry instance
 agent_registry = SecureAgentRegistry()
 
@@ -54,6 +55,7 @@ rate_limit_records: dict[str, list[float]] = defaultdict(list)
 MAX_REQUESTS_PER_WINDOW = 60
 WINDOW_SECONDS = 60
 MAX_CONTENT_LENGTH = 128 * 1024  # 128 KB max payload size
+
 
 @app.post(
     "/registry/register",
@@ -112,6 +114,7 @@ async def search_services_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search query error: {str(e)}"
         )
+
 
 def get_db_path() -> Optional[str]:
     """Resolve path to local SQLite database file."""
@@ -176,6 +179,12 @@ async def get_dashboard_stats():
     if not db_path or not os.path.exists(db_path):
         return stats
 
+    # Strict whitelist to prevent any SQL injection vectors (CWE-89)
+    ALLOWED_INV_TABLES = {"invoices", "deals", "settlements"}
+    ALLOWED_MSG_TABLES = {"messages", "negotiations", "signatures"}
+    ALLOWED_AMOUNT_COLS = {"total_usdc", "total", "amount"}
+    ALLOWED_FEE_COLS = {"platform_fee_usdc", "fee", "platform_fee"}
+
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -186,24 +195,24 @@ async def get_dashboard_stats():
 
         target_inv_table = None
         for candidate in ["invoices", "settlements", "deals"]:
-            if candidate in tables:
+            if candidate in tables and candidate in ALLOWED_INV_TABLES:
                 target_inv_table = candidate
                 break
 
         if target_inv_table:
-            cursor.execute(f"PRAGMA table_info({target_inv_table});")
+            cursor.execute(f"PRAGMA table_info({target_inv_table});")  # nosec B608
             cols = {row[1] for row in cursor.fetchall()}
 
-            amount_col = next((c for c in ["total_usdc", "total", "amount"] if c in cols), None)
-            fee_col = next((c for c in ["platform_fee_usdc", "fee", "platform_fee"] if c in cols), None)
+            amount_col = next((c for c in ["total_usdc", "total", "amount"] if c in cols and c in ALLOWED_AMOUNT_COLS), None)
+            fee_col = next((c for c in ["platform_fee_usdc", "fee", "platform_fee"] if c in cols and c in ALLOWED_FEE_COLS), None)
 
             if amount_col:
-                cursor.execute(f"SELECT COUNT(*), COALESCE(SUM({amount_col}), 0) FROM {target_inv_table}")
+                cursor.execute(f"SELECT COUNT(*), COALESCE(SUM({amount_col}), 0) FROM {target_inv_table}")  # nosec B608
                 deal_count, total_vol = cursor.fetchone()
 
                 total_rev = 0.0
                 if fee_col:
-                    cursor.execute(f"SELECT COALESCE(SUM({fee_col}), 0) FROM {target_inv_table}")
+                    cursor.execute(f"SELECT COALESCE(SUM({fee_col}), 0) FROM {target_inv_table}")  # nosec B608
                     total_rev = cursor.fetchone()[0]
                 else:
                     total_rev = float(total_vol) * 0.015
@@ -213,7 +222,7 @@ async def get_dashboard_stats():
                     stats["total_volume"] = round(float(total_vol), 2)
                     stats["total_revenue"] = round(float(total_rev), 2)
 
-                    cursor.execute(f"SELECT * FROM {target_inv_table} ORDER BY rowid DESC LIMIT 10")
+                    cursor.execute(f"SELECT * FROM {target_inv_table} ORDER BY rowid DESC LIMIT 10")  # nosec B608
                     db_records = cursor.fetchall()
                     live_settlements = []
                     for row in db_records:
@@ -239,12 +248,12 @@ async def get_dashboard_stats():
 
         target_msg_table = None
         for candidate in ["messages", "negotiations", "signatures"]:
-            if candidate in tables:
+            if candidate in tables and candidate in ALLOWED_MSG_TABLES:
                 target_msg_table = candidate
                 break
 
         if target_msg_table:
-            cursor.execute(f"SELECT COUNT(*) FROM {target_msg_table}")
+            cursor.execute(f"SELECT COUNT(*) FROM {target_msg_table}")  # nosec B608
             sig_count = cursor.fetchone()[0]
             if sig_count > 0:
                 stats["signatures_verified"] = int(sig_count)
